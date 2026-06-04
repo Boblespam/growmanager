@@ -11,6 +11,7 @@ import { stockAlertSeuilsAPI, StockAlertResult } from '../api/stockAlertSeuils'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/EmptyState'
 import NouveauStockModal from '../components/NouveauStockModal'
+import BulkEntryModal from '../components/BulkEntryModal'
 import ImportExportModal from '../components/ImportExportModal'
 import StockOriginDrawer from '../components/StockOriginDrawer'
 
@@ -204,18 +205,24 @@ function StockRow({ item, onEdit, onDeleted, onSortie, onOrigine, onLabel }: {
       <td className="px-5 py-3">{ageCol}</td>
       <td className="px-5 py-3 text-right">
         <div className={`flex justify-end gap-1 ${isCloture ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+          <button onClick={e => { e.stopPropagation(); onLabel(item.id_stock) }}
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Imprimer étiquette">
+            <Printer size={14} />
+          </button>
+          <button onClick={e => { e.stopPropagation(); onOrigine(item.id_stock) }}
+            className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded" title="Voir l'origine">
+            <FlaskConical size={14} />
+          </button>
           {!isCloture && (
-            <button onClick={() => setConfirmSortie(true)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Déclarer comme terminé">
+            <button onClick={e => { e.stopPropagation(); setConfirmSortie(true) }}
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded" title="Sortie stock">
               <LogOut size={14} />
             </button>
           )}
-          <button onClick={() => onLabel(item.id_stock)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Télécharger l'étiquette PDF">
-            <Printer size={14} />
-          </button>
-          <button onClick={() => onEdit(item)} className="p-1.5 text-gray-400 hover:text-grow-600 hover:bg-grow-50 rounded" title="Modifier">
+          <button onClick={e => { e.stopPropagation(); onEdit(item) }} className="p-1.5 text-gray-400 hover:text-grow-600 hover:bg-grow-50 rounded" title="Modifier">
             <Pencil size={14} />
           </button>
-          <button onClick={() => setConfirmDelete(true)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+          <button onClick={e => { e.stopPropagation(); setConfirmDelete(true) }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Supprimer">
             <Trash2 size={14} />
           </button>
         </div>
@@ -292,28 +299,29 @@ function ExtractionRow({ item, onEdit, onDeleted, onSortie }: {
     </tr>
   )
 
-  const rowClass = isCloture ? 'opacity-50 bg-gray-50 dark:bg-gray-700/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40 group'
+  const rowClass = isCloture
+    ? 'opacity-50 bg-gray-50 dark:bg-gray-700/30'
+    : 'hover:bg-cyan-50/40 dark:hover:bg-cyan-900/10 group'
 
   return (
     <tr className={rowClass}>
-      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
-        {item.variete_nom || '—'}
-        {isCloture && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-normal">clôturé</span>}
+      <td className="px-5 py-3">
+        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          {item.variete_nom ?? '—'}
+          {isCloture && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-normal">clôturé</span>}
+        </div>
       </td>
       <td className="px-5 py-3"><TypeBadge type={item.type_stock ?? undefined} /></td>
-      <td className="px-5 py-3 text-sm font-semibold text-grow-700">
+      <td className="px-5 py-3 text-sm font-semibold text-cyan-700 dark:text-cyan-400">
         {isCloture ? <span className="line-through text-gray-400 dark:text-gray-500">0 g</span> : `${item.quantite_stock.toFixed(1)} g`}
       </td>
-      <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">
-        {item.date_stock ? new Date(item.date_stock).toLocaleDateString('fr-FR') : '—'}
-      </td>
-      <td className="px-5 py-3 text-sm text-gray-400 dark:text-gray-500">
-        {ageLabel(item.date_stock ?? undefined)}
-      </td>
+      <td className="px-5 py-3 text-sm text-gray-400 dark:text-gray-500">{item.date_stock ? new Date(item.date_stock).toLocaleDateString('fr-FR') : '—'}</td>
+      <td className="px-5 py-3 text-sm text-gray-400 dark:text-gray-500">{ageLabel(item.date_stock ?? undefined)}</td>
       <td className="px-5 py-3 text-right">
         <div className={`flex justify-end gap-1 ${isCloture ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
           {!isCloture && (
-            <button onClick={() => setConfirmSortie(true)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Déclarer comme terminé">
+            <button onClick={() => setConfirmSortie(true)}
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded" title="Sortie extraction">
               <LogOut size={14} />
             </button>
           )}
@@ -329,171 +337,103 @@ function ExtractionRow({ item, onEdit, onDeleted, onSortie }: {
   )
 }
 
-// ── Curing helpers ────────────────────────────────────────────────────────────
-interface PlantWithSession extends PlantCuring {
-  _session: SessionCuring
-}
-
-function curingDaysAgo(dateStr: string): number {
-  const ref = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  const a = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate())
-  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  return Math.max(0, Math.floor((b.getTime() - a.getTime()) / 86_400_000))
-}
-
-function joursCuringLabel(dateStr?: string): string {
-  if (!dateStr) return '—'
-  return `J${curingDaysAgo(dateStr)}`
-}
-
-function curingBadgeClass(dateStr?: string): string {
-  if (!dateStr) return 'bg-gray-100 text-gray-500'
-  const j = curingDaysAgo(dateStr)
-  if (j <= 7)  return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-  if (j <= 14) return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
-  if (j <= 28) return 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
-  return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-}
-
-const CURING_SORTABLE: [CuringSortCol, string][] = [
-  ['plante',       'Plante'],
-  ['variete',      'Variete'],
-  ['culture',      'Culture'],
-  ['bocal',        'Bocal'],
-  ['debut',        'Debut Curing'],
-  ['jours',        'Jours de curing'],
-  ['jours_recolte','Jours depuis récolte'],
-  ['quantite',     'Quantité'],
-]
-
-// ── Onglet curing ─────────────────────────────────────────────────────────────
-function CuringTab({ plants, isLoading }: { plants: PlantWithSession[]; isLoading: boolean }) {
-  const totalPoids = plants.reduce((sum, p) => sum + (p.poids_debut_g ?? 0), 0)
-  const [sortCol, setSortCol] = useState<CuringSortCol | null>(null)
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
-  const handleSort = (col: CuringSortCol) => {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortCol(col); setSortDir('asc') }
-  }
-  const sortedPlants = useMemo(() => {
+// ── Ligne curing ──────────────────────────────────────────────────────────────
+function CuringRow({ session, plants, sortCol, sortDir }: {
+  session: SessionCuring
+  plants: PlantCuring[]
+  sortCol: CuringSortCol | null
+  sortDir: SortDir
+}) {
+  const [open, setOpen] = useState(false)
+  const sorted = useMemo(() => {
     if (!sortCol) return plants
     return [...plants].sort((a, b) => {
-      const sess_a = a._session
-      const sess_b = b._session
-      const labelA = sess_a.nom || (sess_a.type_contenant ? sess_a.type_contenant : 'Session #' + sess_a.id_session_curing)
-      const labelB = sess_b.nom || (sess_b.type_contenant ? sess_b.type_contenant : 'Session #' + sess_b.id_session_curing)
-      let av: string | number = 0
-      let bv: string | number = 0
-      switch (sortCol) {
-        case 'plante':        av = (a.nom_plant || '').toLowerCase();    bv = (b.nom_plant || '').toLowerCase();    break
-        case 'variete':       av = (a.nom_variete || '').toLowerCase();  bv = (b.nom_variete || '').toLowerCase();  break
-        case 'culture':       av = (a.nom_culture || '').toLowerCase();  bv = (b.nom_culture || '').toLowerCase();  break
-        case 'bocal':         av = labelA.toLowerCase();                  bv = labelB.toLowerCase();                  break
-        case 'debut':         av = a.date_mise_curing || '';             bv = b.date_mise_curing || '';             break
-        case 'jours':         av = curingDaysAgo(a.date_mise_curing || ''); bv = curingDaysAgo(b.date_mise_curing || ''); break
-        case 'jours_recolte': av = a.date_recolte ? curingDaysAgo(a.date_recolte) : 0; bv = b.date_recolte ? curingDaysAgo(b.date_recolte) : 0; break
-        case 'quantite':      av = a.poids_debut_g ?? 0;                bv = b.poids_debut_g ?? 0;                break
-      }
-      if (av < bv) return sortDir === 'asc' ? -1 : 1
-      if (av > bv) return sortDir === 'asc' ?  1 : -1
-      return 0
+      let va: string | number = '', vb: string | number = ''
+      if (sortCol === 'plante')        { va = a.nom_affichage ?? ''; vb = b.nom_affichage ?? '' }
+      else if (sortCol === 'variete')  { va = a.variete_nom   ?? ''; vb = b.variete_nom   ?? '' }
+      else if (sortCol === 'culture')  { va = a.nom_culture   ?? ''; vb = b.nom_culture   ?? '' }
+      else if (sortCol === 'bocal')    { va = a.bocal_nom     ?? ''; vb = b.bocal_nom     ?? '' }
+      else if (sortCol === 'debut')    { va = a.date_mise_bocal ?? ''; vb = b.date_mise_bocal ?? '' }
+      else if (sortCol === 'jours')    { va = a.jours_curing ?? 0; vb = b.jours_curing ?? 0 }
+      else if (sortCol === 'jours_recolte') { va = a.jours_depuis_recolte ?? 0; vb = b.jours_depuis_recolte ?? 0 }
+      else if (sortCol === 'quantite') { va = a.poids_recolte ?? 0; vb = b.poids_recolte ?? 0 }
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
     })
   }, [plants, sortCol, sortDir])
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center py-16 text-sm text-gray-400 gap-2">
-      <Loader2 size={16} className="animate-spin" /> Chargement…
-    </div>
-  )
-
-  if (plants.length === 0) return (
-    <EmptyState icon={FlaskConical} title="Aucune plante en curing" description="Les plantes passeront ici dès qu'elles entrent en phase de curing" />
-  )
-
   return (
-    <div className="space-y-4">
-      {/* Carte total */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 rounded-lg">
-          <span className="text-xs text-purple-500">Total en curing</span>
-          <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">{totalPoids.toFixed(1)} g</span>
-        </div>
-        <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-lg">
-          <span className="text-xs text-gray-400 dark:text-gray-500">{plants.length} plante{plants.length > 1 ? 's' : ''}</span>
-        </div>
-      </div>
-
-      {/* Tableau */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-auto max-h-[calc(100vh-380px)]">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-              <tr>
-                {CURING_SORTABLE.map(([col, label]) => (
-                  <th key={col} onClick={() => handleSort(col)}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200">
-                    {label}<SortIcon col={col} current={sortCol} dir={sortDir} />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {sortedPlants.map(p => {
-                const sess = p._session
-                const sessLabel = sess.nom
-                  || (sess.type_contenant ? `${sess.type_contenant}${sess.volume_contenant_l ? ` ${sess.volume_contenant_l}L` : ''}` : `Session #${sess.id_session_curing}`)
-                const bovedaInfo = sess.boveda_rh ? ` · Boveda ${sess.boveda_rh}%` : ''
-                const poidsDebut = p.poids_debut_g != null ? `${p.poids_debut_g.toFixed(1)} g` : '—'
-
-                return (
-                  <tr key={p.id_plant_curing} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                    <td className="px-4 py-2.5 text-sm font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                      {p.nom_plant || `Plant #${p.id_plant}`}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {p.nom_variete || '—'}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {p.nom_culture || '—'}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {sessLabel}
-                      {bovedaInfo && <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">{bovedaInfo}</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {p.date_mise_curing ? new Date(p.date_mise_curing).toLocaleDateString('fr-FR') : '—'}
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${curingBadgeClass(p.date_mise_curing)}`}>
-                        {joursCuringLabel(p.date_mise_curing)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      {p.date_recolte
-                        ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${curingBadgeClass(p.date_recolte)}`}>
-                            J{curingDaysAgo(p.date_recolte)}
-                          </span>
-                        : <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>
-                      }
-                    </td>
-                    <td className="px-4 py-2.5 text-sm font-semibold text-grow-700 whitespace-nowrap">
-                      {poidsDebut}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <>
+      <tr className="hover:bg-purple-50/40 dark:hover:bg-purple-900/10 cursor-pointer" onClick={() => setOpen(o => !o)}>
+        <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="flex items-center gap-2">
+            {open ? <ChevronUp size={14} className="text-purple-500" /> : <ChevronDown size={14} className="text-gray-400" />}
+            {session.nom_culture ?? `Culture #${session.id_culture}`}
+          </span>
+        </td>
+        <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1">
+            <Snowflake size={12} className="text-purple-400" />
+            {session.bocal_count} bocal{session.bocal_count !== 1 ? 'x' : ''}
+          </div>
+        </td>
+        <td className="px-5 py-3 text-sm font-semibold text-purple-700 dark:text-purple-400">
+          {session.total_poids_recolte != null ? `${session.total_poids_recolte.toFixed(1)} g` : '—'}
+        </td>
+        <td className="px-5 py-3" />
+        <td className="px-5 py-3" />
+        <td className="px-5 py-3" />
+        <td className="px-5 py-3" />
+        <td className="px-5 py-3" />
+      </tr>
+      {open && sorted.map(p => (
+        <tr key={p.id_plant} className="bg-purple-50/30 dark:bg-purple-900/10">
+          <td className="px-5 py-2 pl-12 text-sm text-gray-700 dark:text-gray-300">
+            <div>{p.nom_affichage ?? '—'}</div>
+            {p.variete_nom && <div className="text-xs text-gray-400 dark:text-gray-500">{p.variete_nom}</div>}
+          </td>
+          <td className="px-5 py-2 text-sm text-gray-500 dark:text-gray-400">{p.nom_culture ?? '—'}</td>
+          <td className="px-5 py-2 text-sm font-medium text-purple-700 dark:text-purple-400">
+            {p.poids_recolte != null ? `${p.poids_recolte.toFixed(1)} g` : '—'}
+          </td>
+          <td className="px-5 py-2 text-sm text-gray-400 dark:text-gray-500">{p.bocal_nom ?? '—'}</td>
+          <td className="px-5 py-2 text-sm text-gray-400 dark:text-gray-500">
+            {p.date_mise_bocal ? new Date(p.date_mise_bocal).toLocaleDateString('fr-FR') : '—'}
+          </td>
+          <td className="px-5 py-2 text-sm text-gray-400 dark:text-gray-500">
+            {p.jours_curing != null ? `${p.jours_curing} j` : '—'}
+          </td>
+          <td className="px-5 py-2 text-sm text-gray-400 dark:text-gray-500">
+            {p.jours_depuis_recolte != null ? `${p.jours_depuis_recolte} j` : '—'}
+          </td>
+          <td className="px-5 py-2" />
+        </tr>
+      ))}
+    </>
   )
 }
 
-// ── Page principale ───────────────────────────────────────────────────────────
+// ── Composant principal ───────────────────────────────────────────────────────
 export default function StockPage() {
   const queryClient = useQueryClient()
+
+  const { data: stockData = [], isLoading: loadingStock } = useQuery<Stock[]>({
+    queryKey: ['stock'],
+    queryFn: async () => (await stockAPI.getAll()).data,
+  })
+
+  const { data: curingData, isLoading: loadingCuring } = useQuery<{
+    sessions: SessionCuring[]
+    plants: PlantCuring[]
+  }>({
+    queryKey: ['curing-dashboard'],
+    queryFn: async () => (await curingAPI.getDashboard()).data,
+  })
+
+  const { data: alertsData } = useQuery<StockAlertResult>({
+    queryKey: ['stock-alert-seuils'],
+    queryFn: async () => (await stockAlertSeuilsAPI.checkAll()).data,
+  })
 
   const [activeTab,    setActiveTab]    = useState<'stock' | 'curing' | 'extractions'>('stock')
   const [searchTerm,   setSearchTerm]   = useState('')
@@ -507,98 +447,119 @@ export default function StockPage() {
   const [showModal,        setShowModal]        = useState(false)
   const [editStock,        setEditStock]        = useState<Stock | null>(null)
   const [showImportExport, setShowImportExport] = useState(false)
+  const [showBulkEntry,    setShowBulkEntry]    = useState(false)
   const [origineStockId,   setOrigineStockId]   = useState<number | null>(null)
+  const [labelStockId,     setLabelStockId]     = useState<number | null>(null)
+
+  const curingSortState = useState<CuringSortCol | null>(null)
+  const [curingSortCol, setCuringSortCol] = curingSortState
+  const [curingSortDir, setCuringSortDir] = useState<SortDir>('asc')
 
   const handleSort = (col: StockSortCol) => {
     if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortCol(col); setSortDir('asc') }
   }
+  const handleExtSort = (col: ExtractionSortCol) => {
+    if (extSortCol === col) setExtSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setExtSortCol(col); setExtSortDir('asc') }
+  }
+  const handleCuringSort = (col: CuringSortCol) => {
+    if (curingSortCol === col) setCuringSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setCuringSortCol(col); setCuringSortDir('asc') }
+  }
 
-  // ── Data ───────────────────────────────────────────────────────────────────
-  const { data: stocks = [], isLoading: stockLoading } = useQuery({
-    queryKey: ['stock'],
-    queryFn: async (): Promise<Stock[]> => (await stockAPI.getAll()).data,
-  })
-
-  const { data: stockAlerts = [] } = useQuery<StockAlertResult[]>({
-    queryKey: ['stock-alerts'],
-    queryFn: async () => (await stockAlertSeuilsAPI.check()).data,
-    refetchInterval: 60_000,
-  })
-
-  const { data: curingSessions = [], isLoading: curingLoading } = useQuery({
-    queryKey: ['curing-sessions-active'],
-    queryFn: (): Promise<SessionCuring[]> => curingAPI.list('active'),
-  })
-
-  const curingPlants = useMemo((): PlantWithSession[] => {
-    const result: PlantWithSession[] = []
-    curingSessions.forEach(session => {
-      session.plants
-        .filter(p => !p.date_fin_curing)
-        .forEach(p => { result.push({ ...p, _session: session }) })
-    })
-    return result
-  }, [curingSessions])
-
-  // ── Stock filtre + tri ─────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    const base = stocks.filter(s => {
-      const q = searchTerm.toLowerCase()
-      const matchSearch   = (s.variete_nom || '').toLowerCase().includes(q) || (s.sous_type_stock || '').toLowerCase().includes(q)
-      const matchType     = !typeFilter || s.type_stock === typeFilter
-      const matchCloture  = showClotures ? true : !s.date_fin_stock
+  // ── Filtrage / tri stock ────────────────────────────────────────────────────
+  const stockFiltered = useMemo(() => {
+    let data = stockData.filter(s => {
+      const matchSearch = !searchTerm ||
+        (s.variete_nom ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.plant_nom   ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+      const matchType   = !typeFilter || s.type_stock === typeFilter
+      const matchCloture = showClotures || !s.date_fin_stock
       const notExtraction = !EXTRACTION_TYPES.includes(s.type_stock || '')
       return matchSearch && matchType && matchCloture && notExtraction
     })
-    if (!sortCol) return base
-    return [...base].sort((a, b) => {
-      let av: string | number, bv: string | number
-      switch (sortCol) {
-        case 'variete':  av = a.variete_nom    || ''; bv = b.variete_nom    || ''; break
-        case 'type':     av = a.type_stock     || ''; bv = b.type_stock     || ''; break
-        case 'soustype': av = a.sous_type_stock || ''; bv = b.sous_type_stock || ''; break
-        case 'engrais':  av = a.engrais_type   || ''; bv = b.engrais_type   || ''; break
-        case 'bocal':    av = a.bocal_nom      || ''; bv = b.bocal_nom      || ''; break
-        case 'quantite': av = a.quantite_stock;        bv = b.quantite_stock;        break
-        case 'date':     av = a.date_stock     || ''; bv = b.date_stock     || ''; break
-        case 'age':      av = a.date_stock     || ''; bv = b.date_stock     || ''; break
-        default: return 0
-      }
-      if (av < bv) return sortDir === 'asc' ? -1 : 1
-      if (av > bv) return sortDir === 'asc' ? 1  : -1
-      return 0
-    })
-  }, [stocks, searchTerm, typeFilter, showClotures, sortCol, sortDir])
+    if (sortCol) {
+      data = [...data].sort((a, b) => {
+        let va: string | number = '', vb: string | number = ''
+        if (sortCol === 'variete')   { va = a.variete_nom      ?? ''; vb = b.variete_nom      ?? '' }
+        if (sortCol === 'type')      { va = a.type_stock        ?? ''; vb = b.type_stock        ?? '' }
+        if (sortCol === 'soustype')  { va = a.sous_type_stock   ?? ''; vb = b.sous_type_stock   ?? '' }
+        if (sortCol === 'engrais')   { va = a.engrais_type      ?? ''; vb = b.engrais_type      ?? '' }
+        if (sortCol === 'bocal')     { va = a.bocal_nom         ?? ''; vb = b.bocal_nom         ?? '' }
+        if (sortCol === 'quantite')  { va = a.quantite_stock;          vb = b.quantite_stock }
+        if (sortCol === 'date')      { va = a.date_stock        ?? ''; vb = b.date_stock        ?? '' }
+        if (sortCol === 'age')       { va = a.date_stock        ?? ''; vb = b.date_stock        ?? '' }
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return data
+  }, [stockData, searchTerm, typeFilter, showClotures, sortCol, sortDir])
 
   const extractionFiltered = useMemo(() => {
-    return stocks.filter(s => {
-      const q = searchTerm.toLowerCase()
-      const matchSearch   = (s.variete_nom || '').toLowerCase().includes(q)
-      const matchCloture  = showClotures ? true : !s.date_fin_stock
-      const matchExtType  = !extTypeFilter || s.type_stock === extTypeFilter
-      return matchSearch && matchCloture && matchExtType && EXTRACTION_TYPES.includes(s.type_stock || '')
+    let data = stockData.filter(s => {
+      const matchSearch = !searchTerm || (s.variete_nom ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+      const matchType   = !extTypeFilter || s.type_stock === extTypeFilter
+      const matchCloture = showClotures || !s.date_fin_stock
+      const isExtraction = EXTRACTION_TYPES.includes(s.type_stock || '')
+      return matchSearch && matchType && matchCloture && isExtraction
     })
-  }, [stocks, searchTerm, showClotures, extTypeFilter])
+    if (extSortCol) {
+      data = [...data].sort((a, b) => {
+        let va: string | number = '', vb: string | number = ''
+        if (extSortCol === 'variete')  { va = a.variete_nom   ?? ''; vb = b.variete_nom   ?? '' }
+        if (extSortCol === 'type')     { va = a.type_stock     ?? ''; vb = b.type_stock     ?? '' }
+        if (extSortCol === 'quantite') { va = a.quantite_stock;       vb = b.quantite_stock }
+        if (extSortCol === 'date')     { va = a.date_stock     ?? ''; vb = b.date_stock     ?? '' }
+        if (extSortCol === 'age')      { va = a.date_stock     ?? ''; vb = b.date_stock     ?? '' }
+        const cmp = va < vb ? -1 : va > vb ? 1 : 0
+        return extSortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return data
+  }, [stockData, searchTerm, extTypeFilter, showClotures, extSortCol, extSortDir])
 
+  // ── Stats ──────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const active     = stocks.filter(s => !s.date_fin_stock && !EXTRACTION_TYPES.includes(s.type_stock || ''))
-    const total      = active.reduce((s, i) => s + i.quantite_stock, 0)
-    const byType     = active.reduce((acc, s) => { const t = s.type_stock || 'Autre'; acc[t] = (acc[t] || 0) + s.quantite_stock; return acc }, {} as Record<string, number>)
-    const nbClotures = stocks.filter(s => !!s.date_fin_stock && !EXTRACTION_TYPES.includes(s.type_stock || '')).length
+    const active = stockData.filter(s => !s.date_fin_stock && !EXTRACTION_TYPES.includes(s.type_stock || ''))
+    const activeExt = stockData.filter(s => !s.date_fin_stock && EXTRACTION_TYPES.includes(s.type_stock || ''))
+    const totalG   = active.reduce((s, x) => s + x.quantite_stock, 0)
+    const totalExt = activeExt.reduce((s, x) => s + x.quantite_stock, 0)
+    const byType: Record<string, number> = {}
+    const byTypeExt: Record<string, number> = {}
+    active.forEach(s => { byType[s.type_stock ?? 'Autre'] = (byType[s.type_stock ?? 'Autre'] ?? 0) + s.quantite_stock })
+    activeExt.forEach(s => { byTypeExt[s.type_stock ?? 'Autre'] = (byTypeExt[s.type_stock ?? 'Autre'] ?? 0) + s.quantite_stock })
+    return { totalG, totalExt, byType, byTypeExt }
+  }, [stockData])
 
-    const activeExt     = stocks.filter(s => !s.date_fin_stock && EXTRACTION_TYPES.includes(s.type_stock || ''))
-    const totalExt      = activeExt.reduce((s, i) => s + i.quantite_stock, 0)
-    const byTypeExt     = activeExt.reduce((acc, s) => { const t = s.type_stock || 'Autre'; acc[t] = (acc[t] || 0) + s.quantite_stock; return acc }, {} as Record<string, number>)
-    const nbCloturesExt = stocks.filter(s => !!s.date_fin_stock && EXTRACTION_TYPES.includes(s.type_stock || '')).length
-
-    return { total, byType, nbClotures, totalExt, byTypeExt, nbCloturesExt }
-  }, [stocks])
-
-  const allTypes = Object.keys(stats.byType).sort()
+  const allTypes = useMemo(() =>
+    [...new Set(stockData.filter(s => !EXTRACTION_TYPES.includes(s.type_stock || '')).map(s => s.type_stock).filter(Boolean))].sort() as string[],
+    [stockData]
+  )
   const allExtractionTypes = Object.keys(stats.byTypeExt).sort()
 
-  if (stockLoading) return <LoadingSpinner />
+  const curingStats = useMemo(() => {
+    const plants = curingData?.plants ?? []
+    return {
+      totalBocaux: plants.length,
+      totalPoids: plants.reduce((s, p) => s + (p.poids_recolte ?? 0), 0),
+    }
+  }, [curingData])
+
+  const curingSessionsFiltered = useMemo(() => {
+    const sessions = curingData?.sessions ?? []
+    const plants   = curingData?.plants   ?? []
+    return sessions.map(session => ({
+      session,
+      plants: plants.filter(p => p.id_culture === session.id_culture),
+    }))
+  }, [curingData])
+
+  if (loadingStock) return <LoadingSpinner />
+
+  const th = 'px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200'
+  const thFixed = 'px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap'
 
   return (
     <div className="space-y-6">
@@ -608,6 +569,7 @@ export default function StockPage() {
         <NouveauStockModal editStock={editStock} onClose={() => { setShowModal(false); setEditStock(null) }} />
       )}
       {showImportExport && <ImportExportModal onClose={() => setShowImportExport(false)} />}
+      {showBulkEntry && <BulkEntryModal onClose={() => setShowBulkEntry(false)} />}
 
       {/* Drawer traçabilité origine */}
       {origineStockId && (
@@ -617,64 +579,80 @@ export default function StockPage() {
         />
       )}
 
-      {/* Bandeau alertes stock */}
-      {stockAlerts.some(a => a.nb_bocaux_bas > 0 || a.alerte_total) && (
-        <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 space-y-2">
+      {/* Alertes seuils */}
+      {alertsData && (alertsData.alerts.length > 0 || alertsData.ruptures.length > 0) && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-5 py-4">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-sm">
             <AlertTriangle size={16} />
             Alertes stock
           </div>
-          {stockAlerts.map(alert => (
-            <div key={alert.type_stock}>
-              {alert.bocaux_bas.map(bocal => (
-                <div key={bocal.id_stock}
+          {alertsData.ruptures.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {alertsData.ruptures.map(r => (
+                <div key={r.variete_nom}
                      className="flex items-center justify-between text-sm py-1 border-b border-red-100 dark:border-red-800 last:border-0">
-                  <span className="text-red-700 dark:text-red-300">
-                    {bocal.variete_nom || `Stock #${bocal.id_stock}`}
-                    <span className="text-xs text-red-500 dark:text-red-400 ml-1">({alert.type_stock})</span>
-                  </span>
-                  <span className="text-red-600 dark:text-red-400 font-mono text-xs">
-                    {bocal.quantite_stock.toFixed(1)} g
-                    {bocal.pct_restant != null && ` · ${bocal.pct_restant}%`}
-                    {bocal.raison === 'pct' && ' ⬇ % bas'}
-                    {bocal.raison === 'g' && ' ⬇ qté basse'}
-                    {bocal.raison === 'g+pct' && ' ⬇ qté+% bas'}
-                  </span>
+                  <span className="text-red-700 dark:text-red-300 font-medium">{r.variete_nom}</span>
+                  <span className="text-red-600 dark:text-red-400 text-xs">Rupture · {r.quantite_actuelle.toFixed(0)} g</span>
                 </div>
               ))}
-              {alert.alerte_total && (
-                <div className="flex items-center justify-between text-sm py-1">
-                  <span className="text-red-700 dark:text-red-300 italic">Total {alert.type_stock}</span>
-                  <span className="text-red-600 dark:text-red-400 font-mono text-xs">
-                    {alert.total_g} g (seuil : {alert.seuil_total_g} g)
-                  </span>
-                </div>
-              )}
             </div>
-          ))}
+          )}
+          {alertsData.alerts.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {alertsData.alerts.map(a => (
+                <div key={a.variete_nom}
+                     className="flex items-center justify-between text-sm py-1">
+                  <span className="text-red-600 dark:text-red-300">{a.variete_nom}</span>
+                  <span className="text-red-500 text-xs">{a.quantite_actuelle.toFixed(0)} g / seuil {a.seuil_alerte} g</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Stock</h1>
-          {activeTab === 'stock' && stats.total > 0 && (
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-grow-50 border border-grow-100 rounded-lg">
-              <span className="text-xs text-grow-500">Total actif</span>
-              <span className="text-sm font-semibold text-grow-700">{stats.total.toFixed(1)} g</span>
+          <div className="flex items-center gap-2">
+            <Package size={24} className="text-grow-600" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stock</h1>
+          </div>
+          {activeTab === 'stock' && stats.totalG > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-grow-50 border border-grow-100 rounded-lg">
+                <span className="text-xs text-grow-600 font-medium">{stats.totalG.toFixed(0)} g</span>
+                <span className="text-xs text-grow-500">total</span>
+              </div>
+              {Object.entries(stats.byType).map(([type, qty]) => (
+                <div key={type} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 rounded-lg">
+                  <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">{qty.toFixed(0)} g</span>
+                  <span className="text-xs text-purple-500">{type}</span>
+                </div>
+              ))}
             </div>
           )}
-          {activeTab === 'curing' && curingPlants.length > 0 && (
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 rounded-lg">
-              <span className="text-xs text-purple-500">Total en curing</span>
-              <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">{curingPlants.reduce((s, p) => s + (p.poids_debut_g ?? 0), 0).toFixed(1)} g</span>
+          {activeTab === 'curing' && curingStats.totalBocaux > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 rounded-lg">
+                <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">{curingStats.totalBocaux}</span>
+                <span className="text-xs text-purple-500">bocaux</span>
+              </div>
+              <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-lg">
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">{curingStats.totalPoids.toFixed(0)} g</span>
+                <span className="text-xs text-gray-400">récolte</span>
+              </div>
             </div>
           )}
           {activeTab === 'extractions' && stats.totalExt > 0 && (
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-cyan-50 border border-cyan-100 rounded-lg">
+            <div className="flex items-center gap-3">
               <span className="text-xs text-cyan-500">Total extractions</span>
-              <span className="text-sm font-semibold text-cyan-700">{stats.totalExt.toFixed(1)} g</span>
+              {Object.entries(stats.byTypeExt).map(([type, qty]) => (
+                <div key={type} className="flex items-center gap-1 px-3 py-1.5 bg-cyan-50 border border-cyan-100 rounded-lg">
+                  <span className="text-xs text-cyan-700 font-medium">{qty.toFixed(0)} g</span>
+                  <span className="text-xs text-cyan-500">{type}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -685,6 +663,10 @@ export default function StockPage() {
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/40 text-sm">
                 <ArrowDownUp size={15} />Import / Export
               </button>
+              <button onClick={() => setShowBulkEntry(true)}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/40 text-sm">
+                <Plus size={15} />Saisie en masse
+              </button>
               <button onClick={() => setShowModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-grow-600 text-white rounded-lg hover:bg-grow-700 text-sm font-medium">
                 <Plus size={18} />Nouveau stock
@@ -694,265 +676,226 @@ export default function StockPage() {
         </div>
       </div>
 
-      {/* Toggle tabs */}
+      {/* Onglets */}
       <div className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('stock')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'stock'
-              ? 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow'
+              ? 'bg-white dark:bg-gray-800 text-grow-700 dark:text-grow-400 shadow-sm'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
-          <Package size={14} />
-          En stock
-          <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-            activeTab === 'stock' ? 'bg-grow-100 text-grow-700' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-          }`}>{stocks.filter(s => !s.date_fin_stock && !EXTRACTION_TYPES.includes(s.type_stock || '')).length}</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('extractions')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'extractions'
-              ? 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-          }`}
-        >
-          <Snowflake size={14} />
-          Pour extraction
-          <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-            activeTab === 'extractions' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-          }`}>{stocks.filter(s => !s.date_fin_stock && EXTRACTION_TYPES.includes(s.type_stock || '')).length}</span>
+          <Package size={15} />Stock
+          {stockFiltered.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'stock' ? 'bg-grow-100 text-grow-700' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
+              {stockFiltered.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('curing')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'curing'
-              ? 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow'
+              ? 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-400 shadow-sm'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
-          <FlaskConical size={14} />
-          En curing
-          <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-            activeTab === 'curing' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-          }`}>{curingPlants.length}</span>
+          <Snowflake size={15} />Curing
+          {curingStats.totalBocaux > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'curing' ? 'bg-purple-100 text-purple-700' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}`}>
+              {curingStats.totalBocaux}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('extractions')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'extractions'
+              ? 'bg-white dark:bg-gray-800 text-cyan-700 dark:text-cyan-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          }`}
+        >
+          <FlaskConical size={15} />Extractions
+          {extractionFiltered.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === 'extractions' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+            }`}>
+              {extractionFiltered.length}
+            </span>
+          )}
         </button>
       </div>
 
       {/* ── Onglet Stock ─────────────────────────────────────────────────────── */}
       {activeTab === 'stock' && (
-        <>
-          {/* Cartes par type */}
-          {allTypes.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {allTypes.map(type => (
-                <button key={type}
-                  onClick={() => setTypeFilter(typeFilter === type ? '' : type)}
-                  className={`text-left rounded-lg p-4 border-2 transition-colors ${
-                    typeFilter === type ? 'border-grow-500 bg-grow-50' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-grow-300'
-                  }`}
-                >
-                  <TypeBadge type={type} />
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 mt-2">{stats.byType[type].toFixed(1)} g</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {stocks.filter(s => (s.type_stock || 'Autre') === type && !s.date_fin_stock).length} actif{stocks.filter(s => (s.type_stock || 'Autre') === type && !s.date_fin_stock).length > 1 ? 's' : ''}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
 
-          {/* Barre de recherche */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="flex flex-col lg:flex-row gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500" size={17} />
-                <input type="text" placeholder="Variété, sous-type..."
-                  className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              </div>
-              {typeFilter && (
-                <button onClick={() => setTypeFilter('')} className="px-3 py-2 text-sm text-grow-600 border border-grow-200 bg-grow-50 rounded-lg hover:bg-grow-100">
-                  Type : {typeFilter} ✕
-                </button>
-              )}
-              {stats.nbClotures > 0 && (
-                <button onClick={() => setShowClotures(v => !v)}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    showClotures ? 'bg-gray-200 text-gray-700 border-gray-300' : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-50'
-                  }`}>
-                  {showClotures ? 'Masquer clôturés' : `Voir clôturés (${stats.nbClotures})`}
-                </button>
-              )}
+          {/* Filtres */}
+          <div className="flex flex-col lg:flex-row gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher variété ou plante…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
             </div>
-            {(searchTerm || typeFilter) && (
-              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                {filtered.length} résultat{filtered.length > 1 ? 's' : ''} sur {stocks.length}
-              </p>
-            )}
+            <select
+              value={typeFilter}
+              onChange={e => setTypeFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <option value="">Tous les types</option>
+              {allTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer">
+              <input type="checkbox" checked={showClotures} onChange={e => setShowClotures(e.target.checked)} className="rounded" />
+              Afficher clôturés
+            </label>
           </div>
 
-          {/* Tableau stock */}
-          {filtered.length === 0 ? (
-            <EmptyState icon={Package} title="Aucun stock" description='Cliquez sur "Nouveau stock" pour ajouter une entrée manuellement' />
+          {/* Table */}
+          {stockFiltered.length === 0 ? (
+            <EmptyState
+              icon={<Package size={40} />}
+              title="Aucun stock"
+              description={searchTerm || typeFilter ? 'Aucun résultat pour ces filtres.' : 'Ajoutez votre premier stock.'}
+            />
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              <div className="overflow-auto max-h-[calc(100vh-380px)]">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-                    <tr>
-                      {([
-                        ['variete',  'Variété'],
-                        ['type',     'Type'],
-                        ['soustype', 'Spécifications'],
-                        ['engrais',  'Substrat / Engrais'],
-                        ['bocal',    'Bocal'],
-                        ['quantite', 'Quantité'],
-                        ['date',     'Date'],
-                        ['age',      'Âge / Durée'],
-                      ] as [StockSortCol, string][]).map(([col, label]) => (
-                        <th key={col} onClick={() => handleSort(col)}
-                          className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-600 whitespace-nowrap">
-                          {label}<SortIcon col={col} current={sortCol} dir={sortDir} />
-                        </th>
-                      ))}
-                      <th className="px-5 py-3 w-24"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {filtered.map(item => (
-                      <StockRow key={item.id_stock} item={item}
-                        onEdit={s => setEditStock(s)}
-                        onDeleted={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
-                        onSortie={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
-                        onOrigine={id => setOrigineStockId(id)}
-                        onLabel={id => stockAPI.downloadLabel(id)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-5 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-                {filtered.filter(s => !s.date_fin_stock).length} actif{filtered.filter(s => !s.date_fin_stock).length > 1 ? 's' : ''} · {filtered.filter(s => !s.date_fin_stock).reduce((s, i) => s + i.quantite_stock, 0).toFixed(1)} g affichés
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className={th} onClick={() => handleSort('variete')}>Variété / Plante <SortIcon col="variete" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('type')}>Type <SortIcon col="type" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('soustype')}>Specs <SortIcon col="soustype" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('engrais')}>Substrat / Engrais <SortIcon col="engrais" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('bocal')}>Bocal <SortIcon col="bocal" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('quantite')}>Quantité <SortIcon col="quantite" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('date')}>Date <SortIcon col="date" current={sortCol} dir={sortDir} /></th>
+                    <th className={th} onClick={() => handleSort('age')}>Âge <SortIcon col="age" current={sortCol} dir={sortDir} /></th>
+                    <th className={thFixed} />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {stockFiltered.map(s => (
+                    <StockRow
+                      key={s.id_stock}
+                      item={s}
+                      onEdit={s => setEditStock(s)}
+                      onDeleted={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
+                      onSortie={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
+                      onOrigine={id => setOrigineStockId(id)}
+                      onLabel={id => setLabelStockId(id)}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </>
-      )}
-
-      {/* ── Onglet Extractions ───────────────────────────────────────────────── */}
-      {activeTab === 'extractions' && (
-        <>
-          {/* Cartes par type */}
-          {allExtractionTypes.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {allExtractionTypes.map(type => (
-                <button key={type}
-                  onClick={() => setExtTypeFilter(extTypeFilter === type ? '' : type)}
-                  className={`text-left rounded-lg p-4 border-2 transition-colors ${
-                    extTypeFilter === type ? 'border-cyan-500 bg-cyan-50' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-cyan-300'
-                  }`}
-                >
-                  <TypeBadge type={type} />
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 mt-2">{stats.byTypeExt[type].toFixed(1)} g</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {stocks.filter(s => s.type_stock === type && !s.date_fin_stock).length} actif{stocks.filter(s => s.type_stock === type && !s.date_fin_stock).length > 1 ? 's' : ''}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Barre de recherche */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="flex flex-col lg:flex-row gap-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-2.5 text-gray-400 dark:text-gray-500" size={17} />
-                <input type="text" placeholder="Variété..."
-                  className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              </div>
-              {extTypeFilter && (
-                <button onClick={() => setExtTypeFilter('')} className="px-3 py-2 text-sm text-cyan-600 border border-cyan-200 bg-cyan-50 rounded-lg hover:bg-cyan-100">
-                  Type : {extTypeFilter} ✕
-                </button>
-              )}
-              {stats.nbCloturesExt > 0 && (
-                <button onClick={() => setShowClotures(v => !v)}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    showClotures ? 'bg-gray-200 text-gray-700 border-gray-300' : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-50'
-                  }`}>
-                  {showClotures ? 'Masquer clôturés' : `Voir clôturés (${stats.nbCloturesExt})`}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Tableau extractions */}
-          {extractionFiltered.length === 0 ? (
-            <EmptyState icon={Snowflake} title="Aucune extraction" description="Le Trim et le WPFF apparaîtront ici" />
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              <div className="overflow-auto max-h-[calc(100vh-380px)]">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-                    <tr>
-                      {([
-                        ['variete',  'Variété'],
-                        ['type',     'Type'],
-                        ['quantite', 'Quantité'],
-                        ['date',     'Date de récolte'],
-                        ['age',      'Jours depuis la récolte'],
-                      ] as [ExtractionSortCol, string][]).map(([col, label]) => (
-                        <th key={col}
-                          onClick={() => {
-                            if (extSortCol === col) setExtSortDir(d => d === 'asc' ? 'desc' : 'asc')
-                            else { setExtSortCol(col); setExtSortDir('asc') }
-                          }}
-                          className="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-600 whitespace-nowrap">
-                          {label}<SortIcon col={col} current={extSortCol} dir={extSortDir} />
-                        </th>
-                      ))}
-                      <th className="px-5 py-3 w-24"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {[...extractionFiltered].sort((a, b) => {
-                      if (!extSortCol) return 0
-                      let av: string | number, bv: string | number
-                      switch (extSortCol) {
-                        case 'variete':  av = a.variete_nom    || ''; bv = b.variete_nom    || ''; break
-                        case 'type':     av = a.type_stock     || ''; bv = b.type_stock     || ''; break
-                        case 'quantite': av = a.quantite_stock;        bv = b.quantite_stock;        break
-                        case 'date':     av = a.date_stock     || ''; bv = b.date_stock     || ''; break
-                        case 'age':      av = a.date_stock     || ''; bv = b.date_stock     || ''; break
-                        default: return 0
-                      }
-                      if (av < bv) return extSortDir === 'asc' ? -1 : 1
-                      if (av > bv) return extSortDir === 'asc' ?  1 : -1
-                      return 0
-                    }).map(item => (
-                      <ExtractionRow key={item.id_stock} item={item}
-                        onEdit={s => setEditStock(s)}
-                        onDeleted={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
-                        onSortie={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-5 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-                {extractionFiltered.filter(s => !s.date_fin_stock).length} actif{extractionFiltered.filter(s => !s.date_fin_stock).length > 1 ? 's' : ''} · {extractionFiltered.filter(s => !s.date_fin_stock).reduce((s, i) => s + i.quantite_stock, 0).toFixed(1)} g affichés
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
 
       {/* ── Onglet Curing ────────────────────────────────────────────────────── */}
       {activeTab === 'curing' && (
-        <CuringTab plants={curingPlants} isLoading={curingLoading} />
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {loadingCuring ? (
+            <div className="flex items-center justify-center py-16 text-sm text-gray-400 gap-2">
+              <Loader2 size={16} className="animate-spin" /> Chargement…
+            </div>
+          ) : curingSessionsFiltered.length === 0 ? (
+            <EmptyState
+              icon={<Snowflake size={40} />}
+              title="Aucun curing en cours"
+              description="Les plantes en bocal apparaîtront ici."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className={th} onClick={() => handleCuringSort('culture')}>Culture <SortIcon col="culture" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={th} onClick={() => handleCuringSort('bocal')}>Bocal <SortIcon col="bocal" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={th} onClick={() => handleCuringSort('quantite')}>Poids récolte <SortIcon col="quantite" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={th} onClick={() => handleCuringSort('debut')}>Mise en bocal <SortIcon col="debut" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={th} onClick={() => handleCuringSort('jours')}>Jours curing <SortIcon col="jours" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={th} onClick={() => handleCuringSort('jours_recolte')}>Jours récolte <SortIcon col="jours_recolte" current={curingSortCol} dir={curingSortDir} /></th>
+                    <th className={thFixed} />
+                    <th className={thFixed} />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {curingSessionsFiltered.map(({ session, plants }) => (
+                    <CuringRow
+                      key={session.id_culture}
+                      session={session}
+                      plants={plants}
+                      sortCol={curingSortCol}
+                      sortDir={curingSortDir}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Onglet Extractions ───────────────────────────────────────────────── */}
+      {activeTab === 'extractions' && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+          {/* Filtres extractions */}
+          {allExtractionTypes.length > 0 && (
+            <div className="flex gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <select
+                value={extTypeFilter}
+                onChange={e => setExtTypeFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">Tous les types</option>
+                {allExtractionTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          )}
+
+          {extractionFiltered.length === 0 ? (
+            <EmptyState
+              icon={<FlaskConical size={40} />}
+              title="Aucune extraction"
+              description="Les extractions (Trim, WPFF) apparaîtront ici."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className={th} onClick={() => handleExtSort('variete')}>Variété <SortIcon col="variete" current={extSortCol} dir={extSortDir} /></th>
+                    <th className={th} onClick={() => handleExtSort('type')}>Type <SortIcon col="type" current={extSortCol} dir={extSortDir} /></th>
+                    <th className={th} onClick={() => handleExtSort('quantite')}>Quantité <SortIcon col="quantite" current={extSortCol} dir={extSortDir} /></th>
+                    <th className={th} onClick={() => handleExtSort('date')}>Date <SortIcon col="date" current={extSortCol} dir={extSortDir} /></th>
+                    <th className={th} onClick={() => handleExtSort('age')}>Âge <SortIcon col="age" current={extSortCol} dir={extSortDir} /></th>
+                    <th className={thFixed} />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {extractionFiltered.map(s => (
+                    <ExtractionRow
+                      key={s.id_stock}
+                      item={s}
+                      onEdit={s => setEditStock(s)}
+                      onDeleted={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
+                      onSortie={() => queryClient.invalidateQueries({ queryKey: ['stock'] })}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
     </div>
