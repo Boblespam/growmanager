@@ -106,10 +106,19 @@ docker-compose down
 Copier `.env.example` en `.env` et renseigner :
 
 ```env
-MYSQL_ROOT_PASSWORD=   # Mot de passe root MySQL
-MYSQL_USER=            # Utilisateur MySQL
-MYSQL_PASSWORD=        # Mot de passe utilisateur MySQL
-SECRET_KEY=            # Clé secrète pour l'application
+GM_DATA_ROOT=/tondossierdata
+MYSQL_ROOT_PASSWORD=ChangeMoiRoot
+MYSQL_DATABASE=growmanager
+MYSQL_USER=grow
+MYSQL_PASSWORD=ChangeMoiApp
+SECRET_KEY=UneCleLongueAleatoire
+GROWMANAGER_URL=l'ip de ton serveur
+TZ=Europe/Paris
+MYSQL_PORT=3336
+BACKEND_PORT=8864
+FRONTEND_PORT=5177
+APP_PORT=420
+DB_HOST=db
 ```
 
 ---
