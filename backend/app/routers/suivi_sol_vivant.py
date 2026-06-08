@@ -312,6 +312,23 @@ def add_reamendement(suivi_id: int, payload: dict, db: Session = Depends(get_db)
     from pydantic import TypeAdapter
     e = TypeAdapter(SuiviReamendementCreate).validate_python(payload)
     db.add(SuiviReamendement(id_suivi=suivi_id, **e.model_dump()))
+
+    # ── Déduction stock engrais ───────────────────────────────────────────────
+    if e.id_recette_reamend:
+        recette = db.query(RecetteReamendement).filter(
+            RecetteReamendement.id_recette_reamend == e.id_recette_reamend
+        ).first()
+        if recette:
+            for ligne in db.query(RecetteReamendementLigne).filter(
+                RecetteReamendementLigne.id_recette_reamend == recette.id_recette_reamend
+            ).all():
+                prod = db.query(ProduitEngrais).filter(
+                    ProduitEngrais.id_produit == ligne.id_produit
+                ).first()
+                if prod and prod.quantite_stock is not None:
+                    qte = _to_small_unit(float(ligne.quantite), _extract_base_unit(ligne.unite))
+                    prod.quantite_stock = max(0, float(prod.quantite_stock) - qte)
+
     db.commit()
     db.refresh(s)
     return _enrich(s, db)
