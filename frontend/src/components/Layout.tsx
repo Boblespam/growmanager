@@ -11,6 +11,7 @@ import {
 import GlobalSearch from './GlobalSearch'
 import clsx from 'clsx'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { isStandalone } from '../api/client'
 
 interface LayoutProps {
   children: ReactNode
@@ -100,6 +101,25 @@ const navItems: NavItem[] = [
   { path: '/statistiques',      label: 'Statistiques',        icon: BarChart2 },
   { path: '/parametrage',       label: 'Paramétrage',         icon: Settings },
 ]
+
+// ── Mode autonome : pages nécessitant le serveur (capteurs) masquées ──────────
+const STANDALONE_HIDDEN_PATHS = new Set(['/suivi-constantes'])
+
+function filterForStandalone(items: NavItem[]): NavItem[] {
+  if (!isStandalone()) return items
+  const keepLeaf = (l: LeafItem) => !STANDALONE_HIDDEN_PATHS.has(l.path)
+  const filterSubs = (subs: SubItem[]): SubItem[] =>
+    subs
+      .filter(s => (isSubGroup(s) ? true : keepLeaf(s)))
+      .map(s => (isSubGroup(s) ? { ...s, children: s.children.filter(keepLeaf) } : s))
+  return items.map(it =>
+    'children' in it && it.children
+      ? ({ ...it, children: filterSubs(it.children as SubItem[]) } as NavItem)
+      : it
+  )
+}
+
+const visibleNavItems = filterForStandalone(navItems)
 
 // ── Chemins pour la détection "active" des groupes ───────────────────────────
 const culturePaths     = ['/culture', '/plan-culture', '/preparation-substrat', '/sechage-curing', '/suivi-constantes', '/croisement', '/historique-cultures', '/calendrier', '/comparaison-cultures']
@@ -250,7 +270,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
 
   const renderNav = (closeSidebar?: () => void) =>
-    navItems.map((item, i) => {
+    visibleNavItems.map((item, i) => {
       if ('children' in item && item.children) {
         return (
           <NavGroup
@@ -280,16 +300,17 @@ export default function Layout({ children }: LayoutProps) {
       )
     })
 
-  // Bottom nav mobile — aplatir tous les items (y compris sous-groupes)
-  const flatItems: LeafItem[] = navItems.flatMap(item => {
-    if (!('children' in item) || !item.children) return [item as LeafItem]
-    return (item.children as SubItem[]).flatMap(child =>
-      isSubGroup(child) ? child.children : [child as LeafItem]
-    )
-  })
+  // Bottom nav mobile — 4 items principaux + bouton "Plus" (menu complet)
+  const bottomNavItems: LeafItem[] = [
+    { path: '/',           label: 'Dashboard',  icon: Home },
+    { path: '/culture',    label: 'Culture',    icon: Leaf },
+    { path: '/calendrier', label: 'Calendrier', icon: CalendarDays },
+    { path: '/stock',      label: 'Stock',      icon: Package },
+  ]
+  const isBottomNavActive = bottomNavItems.some(i => i.path === location.pathname)
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen-safe bg-gray-50 dark:bg-gray-900">
 
       {/* ── Sidebar Desktop ── */}
       <aside className="hidden lg:flex lg:flex-col w-64 bg-grow-600 text-white">
@@ -383,7 +404,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto">
-          <div className="p-4 pb-24 lg:p-8 lg:pb-8 max-w-7xl mx-auto">
+          <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8 max-w-7xl mx-auto">
             {children}
           </div>
         </main>
@@ -392,23 +413,35 @@ export default function Layout({ children }: LayoutProps) {
         {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
 
         {/* Bottom Navigation Mobile */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex justify-around overflow-x-auto">
-            {flatItems.map((item) => (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]">
+          <div className="flex justify-around">
+            {bottomNavItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 className={clsx(
-                  'flex flex-col items-center space-y-1 flex-1 py-3 transition-colors min-w-[4rem]',
+                  'flex flex-col items-center space-y-1 flex-1 py-2.5 transition-colors',
                   location.pathname === item.path
-                    ? 'text-grow-600 dark:text-grow-400 bg-grow-50 dark:bg-grow-900/20'
-                    : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200 dark:hover:text-gray-200'
+                    ? 'text-grow-600 dark:text-grow-400'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}
               >
-                <NavIcon item={item} size={20} />
-                <span className="text-xs text-center leading-tight">{item.label}</span>
+                <NavIcon item={item} size={22} />
+                <span className="text-[11px] text-center leading-tight">{item.label}</span>
               </Link>
             ))}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className={clsx(
+                'flex flex-col items-center space-y-1 flex-1 py-2.5 transition-colors',
+                !isBottomNavActive
+                  ? 'text-grow-600 dark:text-grow-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              )}
+            >
+              <Menu size={22} />
+              <span className="text-[11px] text-center leading-tight">Plus</span>
+            </button>
           </div>
         </nav>
       </div>

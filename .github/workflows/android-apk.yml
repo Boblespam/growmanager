@@ -1,0 +1,155 @@
+name: Build Android APK
+
+# Déclenché manuellement (Actions → Build Android APK → Run workflow)
+# ou automatiquement sur chaque tag vX.Y.Z
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    env:
+      # secrets.* est interdit dans les conditions if: (erreur "Unrecognized
+      # named-value: 'secrets'") — on le convertit en variable d'env au
+      # niveau du job, utilisable elle dans if: env.HAS_PLAY_KEYSTORE == 'true'
+      HAS_PLAY_KEYSTORE: ${{ secrets.GROWMANAGER_KEYSTORE_BASE64 != '' }}
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Generate icons & splash screens
+        run: npx @capacitor/assets generate --android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/apk/debug/app-debug.apk "growmanager-v${VERSION}.apk"
+          echo "APK_NAME=growmanager-v${VERSION}.apk" >> "$GITHUB_ENV"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: growmanager-apk
+          path: frontend/${{ env.APK_NAME }}
+          retention-days: 30
+
+      - name: Attach APK to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: frontend/${{ env.APK_NAME }}
+
+      # ==========================================================
+      # AAB signé pour Google Play (Test interne / Production)
+      # Ne s'exécute que si le secret GROWMANAGER_KEYSTORE_BASE64
+      # est configuré (Settings → Secrets and variables → Actions).
+      # Voir wiki/features/mobile-app.md pour la mise en place.
+      # ==========================================================
+
+      - name: Decode keystore
+        if: env.HAS_PLAY_KEYSTORE == 'true'
+        run: echo "$KEYSTORE_BASE64" | base64 -d > android/app/growmanager-upload.keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.GROWMANAGER_KEYSTORE_BASE64 }}
+
+      - name: Configure Gradle signing
+        if: env.HAS_PLAY_KEYSTORE == 'true'
+        run: |
+          python3 - <<'PY'
+          path = "android/app/build.gradle"
+          content = open(path).read()
+
+          signing_block = (
+              "    signingConfigs {\n"
+              "        release {\n"
+              "            storeFile file(\"growmanager-upload.keystore\")\n"
+              "            storePassword System.getenv(\"GROWMANAGER_KEYSTORE_PASSWORD\")\n"
+              "            keyAlias System.getenv(\"GROWMANAGER_KEY_ALIAS\")\n"
+              "            keyPassword System.getenv(\"GROWMANAGER_KEY_PASSWORD\")\n"
+              "        }\n"
+              "    }\n\n"
+          )
+          content = content.replace("    buildTypes {", signing_block + "    buildTypes {", 1)
+          content = content.replace(
+              "release {\n            minifyEnabled false",
+              "release {\n            signingConfig signingConfigs.release\n            minifyEnabled false",
+              1,
+          )
+          open(path, "w").write(content)
+          PY
+        env:
+          KEYSTORE_BASE64: ${{ secrets.GROWMANAGER_KEYSTORE_BASE64 }}
+
+      - name: Build release AAB (signé, pour Google Play)
+        if: env.HAS_PLAY_KEYSTORE == 'true'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+        env:
+          GROWMANAGER_KEYSTORE_PASSWORD: ${{ secrets.GROWMANAGER_KEYSTORE_PASSWORD }}
+          GROWMANAGER_KEY_ALIAS: ${{ secrets.GROWMANAGER_KEY_ALIAS }}
+          GROWMANAGER_KEY_PASSWORD: ${{ secrets.GROWMANAGER_KEY_PASSWORD }}
+
+      - name: Rename AAB
+        if: env.HAS_PLAY_KEYSTORE == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/bundle/release/app-release.aab "growmanager-v${VERSION}.aab"
+          echo "AAB_NAME=growmanager-v${VERSION}.aab" >> "$GITHUB_ENV"
+
+      - name: Upload AAB artifact
+        if: env.HAS_PLAY_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: growmanager-aab
+          path: frontend/${{ env.AAB_NAME }}
+          retention-days: 30
+
+      - name: Attach AAB to release (tags only)
+        if: env.HAS_PLAY_KEYSTORE == 'true' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: frontend/${{ env.AAB_NAME }}

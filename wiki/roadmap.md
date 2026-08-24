@@ -1,11 +1,72 @@
 ---
 type: roadmap
-updated: 2026-06-03
+updated: 2026-07-09
 sources: [Documentation/claude.md, Documentation/Instructions de reprises v1.txt, Documentation/GrowManager_Specifications_v4.docx]
 sprint1_completed: 2026-05-10
 ---
 
 # Roadmap & Pending TODOs
+
+---
+
+## Phase Mobile — Plan A puis B (validé 2026-07-04)
+
+**Vision** : app mobile Android, données personnelles chez chaque utilisateur (rien de centralisé).
+**Stratégie** : Phase A = app connectée au serveur auto-hébergé (Capacitor) → Phase B (plus tard) = version 100% autonome (réécriture couche API en TS + SQLite embarqué, frontend réutilisé).
+**Contrainte** : zéro changement de rendu/comportement desktop — responsive via breakpoints Tailwind uniquement. Backend non touché.
+
+### Sprints Phase A
+
+| Sprint | Contenu | État |
+|--------|---------|------|
+| A1 | Bottom nav mobile refaite (4 raccourcis + Plus) · modals mobile OK · safe-area | ✅ validé 2026-07-04 |
+| A2 | Pages responsive (28 pages : tables → scroll/cartes, grilles, formulaires) | ✅ validé 2026-07-04 (batch 1 : 4 pages principales · batch 2 : Croisement, SuiviConstantes, Consommation corrigées, le reste déjà conforme) |
+| A3 | URL serveur configurable (client Axios) + manifest PWA (installable Chrome) | ✅ validé 2026-07-04 |
+| A4 | Capacitor init + APK Android + icône/splash + doc Tailscale accès distant | ✅ validé 2026-07-04 — **Phase A complète** (voir [[features/mobile-app]]) |
+
+**Audit A1 (2026-07-04)** : Layout mobile déjà en place (header, sidebar hamburger) · 12 pages avec tables dont 6 sans scroll horizontal · peu de breakpoints dans les pages · client Axios `baseURL: '/api'` en dur (à rendre configurable en A3).
+
+### Distribution Google Play (décidé 2026-07-09, en cours)
+
+**Temps 1 (en cours)** : Test interne Play Console — supprime l'alerte "app inconnue" à l'install (jusqu'à 100 testeurs, pas de fiche publique). Scaffolding CI + keystore prêts côté repo (voir [[features/mobile-app]]), reste à faire côté Pik : compte développeur Play Console + création app + premier upload manuel + activation Play App Signing.
+
+**Temps 2 (plus tard)** : passage en Production publique → mises à jour poussées depuis le Play Store, fini le téléchargement manuel GitHub. Bloqué sur : Test fermé 12 testeurs / 14 jours consécutifs (palier obligatoire, distinct du Test interne) + fiche store complète (icône, captures, description, politique de confidentialité, classification par âge, formulaire sécurité des données).
+
+### Phase B — Mode standalone (plan validé 2026-07-05) — ✅ Phase B complète
+
+| Sprint | Contenu | État |
+|--------|---------|------|
+| B0-B2 | Fondations, référentiels, cœur culture (backend TS + SQLite embarqué) | ✅ |
+| B3 | Post-récolte standalone | ✅ |
+| B4 | Recettes & sol vivant standalone | ✅ |
+| B5+B6 | Transverses + finitions (Phase B complète) | ✅ |
+
+**Principe clé — dual-mode** : la Phase B **s'ajoute** au mode serveur, elle ne le remplace pas. L'app Android propose 2 modes :
+1. **Standalone** : données 100% locales sur le téléphone (SQLite embarqué), aucun serveur requis.
+2. **Serveur** : connexion à un serveur GrowManager local/distant (comportement Phase A actuel, inchangé).
+
+**Décisions (2026-07-05)** :
+- Choix du mode au **premier lancement** (écran remplaçant `ServerSetup.tsx`) + **modifiable dans Paramétrage → Général**.
+- **Modes indépendants** : pas de sync entre base locale et serveur. Base vide au passage en standalone. L'import/export JSON existant sert de passerelle manuelle si besoin.
+- Architecture : les ~35 fichiers `src/api/*.ts` restent le contrat. Un **backend local TypeScript** réimplémente les routes REST derrière un adapter Axios — zéro changement dans les pages. SQLite via `@capacitor-community/sqlite`, photos via `@capacitor/filesystem`.
+- Backend Python et mode web/desktop **non touchés**.
+
+**Sprints Phase B** :
+
+| Sprint | Contenu | État |
+|--------|---------|------|
+| B0 | Fondations : écran choix de mode (1er lancement + Paramétrage) · plugin SQLite + schéma DB (portage modèles SQLAlchemy → DDL) · adapter Axios → backend local · `/health` local | ✅ validé 2026-07-05 — ModeSetup.tsx (remplace ServerSetup) · gm_mode + rétro-compat · src/local/ (schema 78 tables générées, db, router, adapter) · 501 sur routes non portées |
+| B1 | Référentiels : varietes, breeders, fournisseurs, graines, espaces, engrais, materiel, app_settings, parametres | ✅ validé 2026-07-05 — handlers src/local/handlers/ (referentiels, parametres, espaces, engrais, materiel, graines) · seeds auto (AppSettings + ~35 listes) · fix axios global → adapter aussi sur axios.defaults (passthrough URLs absolues) · smoke test SQL sur schéma réel |
+| B2 | Cœur culture : cultures, plants, arrosages, actions, plan_culture | ✅ validé 2026-07-05 — handlers cultures + cultures-helpers + plan-culture · effets d'actions complets (floraison→prévisions récolte, fin_curing→Stock auto, déduction engrais/TCO) · coûts complets (élec dimmer/phase, engrais, graines) · archivage HistoriqueCulture · photos reportées en fin de phase (Filesystem + URLs images) |
+| B3 | Post-récolte : sechage, curing, stock, stock_alert_seuils, extractions, vaporisateur | ✅ validé 2026-07-05 — handlers sechage-curing (+ WPFF, eligible, sechage/plants, stock-info, bocal-timeline), stock (+ origine, bocaux-disponibles, sortie, alertes+seed Fleur), extractions rosin/hash (multi-sources, stocks produits, synchro édition), vaporisateurs (+ sessions déduction stock) |
+| B4 | Recettes & sol : 6 recette_*, preparation_substrat, suivi_sol_vivant, open_field, croisement, notation_variete | ✅ validé 2026-07-06 — recettes.ts (factory générique 6 types + lignes), sol-vivant.ts (préparation + suivi avec coûts estimés + déduction stock arrosage), croisement.ts (pollen péremption auto + récolte→variété/pack/graines), open-field.ts (récolte mère → variété OF + pack), notation.ts (scores + extraction-stats) |
+| B5 | Transverses : dashboard, calendrier, search, comparaison, consommation, historique_culture | ✅ validé 2026-07-06 — dashboard.ts (stats 6 modules, arrosage-boxes, burping, IPM), transverses.ts (calendrier global + export, search, cultures/compare complet, historique + prix-graine), consommation.ts (CRUD + stats/projection) · capteurs → null en standalone · import/export CSV → B6 |
+| B6 | Limitations & polish : capteurs masqués, photos, doc | ✅ validé 2026-07-06 — photos standalone (@capacitor/filesystem, photos-fs.ts, photoUrl convertFileSrc, sans compression/thumbnail v1) · capteurs masqués (Dashboard, nav Constantes, onglets Paramétrage Capteurs/Sauvegarde) · doc [[features/mobile-standalone]] · exports PDF/CSV et imports CSV restent en 501 — **Phase B complète**, test APK réel à faire |
+
+**Limites connues du mode standalone** :
+- Capteurs Govee/esphome inopérants (nécessitent le serveur) — UI masquée en standalone.
+- Exports PDF (étiquettes, fiche culture) générés côté backend Python → à réimplémenter en JS (jsPDF) ou désactivés en v1 standalone.
+- Distribution Play Store possible (aucune donnée embarquée dans l'app).
 
 ---
 

@@ -1,5 +1,6 @@
 import axios from 'axios'
-import client from './client'
+import client, { serverFileURL, isStandalone } from './client'
+import { localPhotoUrl } from '../local/photos-fs'
 
 export interface Photo {
   id_photo:       number
@@ -17,7 +18,10 @@ export interface Photo {
 }
 
 export function photoUrl(relativePath: string): string {
-  return `/uploads/${relativePath}`
+  // Mode autonome : fichier local sur l'appareil (Capacitor Filesystem)
+  if (isStandalone()) return localPhotoUrl(relativePath)
+  // Passe par serverFileURL pour fonctionner aussi en app mobile (serveur distant)
+  return serverFileURL(`/uploads/${relativePath}`)
 }
 
 export const photosAPI = {

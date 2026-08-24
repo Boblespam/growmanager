@@ -1,0 +1,88 @@
+---
+type: frontend
+updated: 2026-04-09
+sources: [frontend/src/App.tsx, frontend/src/components/Layout.tsx]
+---
+
+# Frontend Overview
+
+React 18 + TypeScript + Vite + Tailwind CSS + TanStack Query v5.
+
+## Route Table
+
+All routes are defined in `frontend/src/App.tsx`, wrapped in `<Layout>`.
+
+| Route | Component | Page |
+|---|---|---|
+| `/` | Dashboard | Overview dashboard (7 modules) |
+| `/culture` | Culture | Active grow cycle management |
+| `/graines` | Graines | Seed catalogue |
+| `/stock` | Stock | Finished product inventory |
+| `/extractions` | Extractions | Rosin extractions |
+| `/extractions-hash` | ExtractionsHash | Hash extractions |
+| `/amendements` | Amendements | Fertilizer products |
+| `/historique-cultures` | HistoriqueCultures | Past grow records |
+| `/statistiques` | Statistiques | Global analytics |
+| `/materiel` | Materiel | Equipment inventory |
+| `/parametrage` | Parametrage | Settings + dropdowns |
+| `/suivi-constantes` | SuiviConstantes | Sensor charts |
+| `/suivi-sols-vivants` | SuiviSolsVivants | Living soil pots |
+| `/espaces-culture` | EspacesCulture | Growing spaces |
+| `/sechage-curing` | SechageCuring | Drying & curing |
+| `/croisement` | Croisement | Breeding (placeholder) |
+| `/plan-culture` | PlanCulture | Culture planning |
+| `/preparation-substrat` | PreparationSubstrat | Substrate calculator |
+| `/recettes/tco` | RecettesTCO | TCO recipes |
+| `/recettes/lso` | RecettesLSO | LSO recipes |
+| `/recettes/reamendement` | RecettesReamendement | Re-amendment recipes |
+| `/recettes/fermentation` | RecettesFermentation | Fermentation recipes |
+| `/recettes/schemas-engrais` | RecettesSchemas | Nutrient schemas (placeholder) |
+| `/calendrier` | CalendrierGlobal | Global monthly calendar — all cultures, all events |
+
+## Component Hierarchy
+
+```
+App
+└── Layout (sidebar nav + header)
+    └── <Route component>
+        └── Page-specific modals and components
+```
+
+`Layout.tsx` — responsive sidebar with navigation links + header. Brand color: `grow-600`.
+
+### Layout — sidebar header
+- Le titre texte "GrowManager" est remplacé par le logo image `public/logo.png` (fichier source : `LogoFinal.png` à la racine, PNG avec fond transparent).
+- Logo affiché centré en haut de la sidebar desktop (`max-w-[162px]`, `pt-2`) et dans la sidebar mobile (`h-12`).
+- En bas de la sidebar : texte `Pik` (à la place de "© 2024 GrowManager").
+
+### Layout — bottom nav mobile (Sprint mobile A1, 2026-07-04)
+- Visible < `lg` uniquement. 4 raccourcis fixes : Dashboard `/`, Culture `/culture`, Calendrier `/calendrier`, Stock `/stock` + bouton **Plus** qui ouvre la sidebar mobile (menu complet).
+- `bottomNavItems` défini dans `Layout.tsx` ; "Plus" est actif (couleur grow) quand la route courante n'est pas un des 4 raccourcis.
+- `pb-[env(safe-area-inset-bottom)]` sur le `<nav>` — support encoche/barre gestuelle (préparation Capacitor).
+- Remplace l'ancienne bottom nav qui aplatissait les 28 items de navigation.
+- Règle modals mobile : pattern standard `max-h-[90vh] overflow-y-auto` sur le conteneur interne (fix appliqué à `NouveauSessionVapoModal.tsx`, seule exception sur 39 modals).
+
+## Component Directory
+
+```
+frontend/src/components/
+├── Layout.tsx              ← nav shell
+├── LoadingSpinner.tsx
+├── EmptyState.tsx
+├── StatCard.tsx            ← reusable metric card
+├── ImportExportModal.tsx   ← CSV import/export dialog
+├── culture/
+│   ├── ActionModal.tsx           ← log a culture/plant action
+│   ├── ArrosageModal.tsx         ← record watering
+│   ├── CalendrierCulture.tsx     ← action timeline view
+│   ├── NouvellerCultureModal.tsx ← create culture (internal/external, multi-goal, living soil)
+│   ├── PlantesTab.tsx            ← plant list within a culture
+│   ├── StatsTab.tsx              ← culture statistics
+│   └── TransfertPlantModal.tsx   ← move plant between cultures
+└── [domain modals]               ← one modal per entity type (20+ modal files)
+```
+
+## See Also
+
+- [[frontend/pages]] — all 24 pages documented
+- [[frontend/conventions]] — React Query, Tailwind, hook rules

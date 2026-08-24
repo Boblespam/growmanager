@@ -1,7 +1,7 @@
 ---
 type: architecture
-updated: 2026-04-09
-sources: [main.py, routers/cultures.py, Documentation/claude.md]
+updated: 2026-07-09
+sources: [main.py, routers/cultures.py, Documentation/claude.md, push.bat, version-bump.ps1]
 ---
 
 # Architecture — Key Patterns
@@ -124,9 +124,31 @@ nb_pots = round(surface_m2 * 20.8 * volume_l ** -0.59)
 Calibrated for a 120×120cm space:
 - 1L → 30 pots, 5.5L → 14, 11L → 12, 16L → 9, 35L → 4, 50L → 3
 
+## 10. Versioning — Bump Automatique (depuis v3.4.0)
+
+Le numéro de version (`frontend/package.json`, `frontend/package-lock.json`, `backend/app/main.py`) est **bumpé automatiquement à chaque push**, plus besoin d'y penser manuellement.
+
+`push.bat` appelle `version-bump.ps1` (racine du repo, **PowerShell**) juste avant `git add -A` :
+
+1. Lit la première ligne de `_commit_msg.txt` (convention déjà en usage : `feat:`, `fix:`, `chore:`, `refactor:`...)
+2. Déduit le type de bump : `feat:` → **minor**, `feat!:`/`BREAKING CHANGE` → **major**, tout le reste → **patch**
+3. Bump `frontend/package.json` + `package-lock.json` par remplacement texte (regex, pas de reformattage du fichier)
+4. Synchronise les 2 occurrences de version dans `backend/app/main.py`
+5. Transforme la section `## [Unreleased]` de `CHANGELOG.md` en `## [X.Y.Z] — YYYY-MM-DD` et recrée une section Unreleased vide au-dessus
+
+**Historique :** la v1 de ce script était en Node.js (`version-bump.js`, exécuté via `node`). Sur la machine de Pik, `node` n'est pas dans le PATH de la fenêtre `cmd.exe` ouverte par double-clic sur `push.bat` (tout le build Node se fait côté CI, jamais en local) — le script s'auto-désactivait silencieusement à chaque push, donc la version ne bumpait jamais. Réécrit en PowerShell (2026-07-09) : natif sur Windows, aucune dépendance à installer. `version-bump.js` laissé en place comme stub obsolète (commentaire seul, plus appelé).
+
+**Bug critique corrigé le jour même :** la v1 du script PowerShell utilisait `Get-Content`/`Set-Content`, qui sur Windows PowerShell 5.1 lisent en ANSI par défaut (pas UTF-8) et ajoutent un BOM à l'écriture — résultat : accents corrompus (mojibake) dans `main.py`/`CHANGELOG.md`, BOM cassant le JSON de `package.json`/`package-lock.json`, et même une troncature (accolade finale perdue). `npm install`/`npm run build` cassés en local et en CI. Fix : le script n'utilise plus que `[System.IO.File]::ReadAllText/WriteAllText` avec un `UTF8Encoding($false)` explicite (jamais de BOM), plus un garde-fou qui annule l'écriture si le fichier semble tronqué après remplacement. Détail complet : [[log]] entrée du 2026-07-09.
+
+Si PowerShell renvoie une erreur, `push.bat` avertit et continue le commit sans bump (non-bloquant).
+
+`bump-version.bat` reste disponible pour un bump manuel exceptionnel (ex: forcer un major hors convention), mais n'est plus utilisé en flux normal.
+
+**Rule:** le contenu du CHANGELOG (section Ajouté/Corrigé sous `[Unreleased]`) doit être rempli au fil de l'eau à chaque feature validée — le script ne fait que dater/numéroter la section, il n'invente pas son contenu.
+
 ## See Also
 
 - [[architecture/stack]] — tech stack
 - [[architecture/decisions]] — why specific choices were made
-- [[database/schema-overview]] — all tables
+- [[database/database-overview]] — all tables
 - [[features/culture-lifecycle]] — culture status flow

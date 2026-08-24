@@ -75,6 +75,7 @@ Seed catalogue management.
 ### Stock (`/stock`)
 Finished product inventory.
 - Sort by variety, type, jar, quantity, age
+- Colonne Âge / Durée : affichage calendaire précis via `preciseDiffLabel()` (ex: "1 mois et 3 jours", "1 an, 3 mois et 2 jours", "< 1 jour") — gère fins de mois et années bissextiles
 - NouveauStockModal to add entries
 - `sortie` action to mark jar as consumed
 
@@ -223,7 +224,7 @@ Variety scoring and ranking system.
 
 ## See Also
 
-- [[frontend/overview]] — routing table + component hierarchy
+- [[frontend/frontend-overview]] — routing table + component hierarchy
 - [[frontend/conventions]] — React patterns
 
 ### ComparaisonCultures (`/comparaison-cultures`)

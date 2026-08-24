@@ -28,8 +28,15 @@ import ClassementVarietes from './pages/ClassementVarietes'
 import Consommation from './pages/Consommation'
 import CalendrierGlobal from './pages/CalendrierGlobal'
 import ComparaisonCultures from './pages/ComparaisonCultures'
+import ModeSetup from './components/ModeSetup'
+import { getAppMode, isNativeApp } from './api/client'
 
 function App() {
+  // App mobile sans mode choisi → écran de choix (autonome ou serveur)
+  if (isNativeApp() && !getAppMode()) {
+    return <ModeSetup />
+  }
+
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Layout>

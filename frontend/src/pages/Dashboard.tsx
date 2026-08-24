@@ -5,6 +5,7 @@ import {
   TrendingUp, Scissors, Thermometer, Wifi, WifiOff, Droplets,
 } from 'lucide-react'
 import { dashboardAPI, DashboardFullStats, BoxArrosageStats, IpmWarning } from '../api/dashboard'
+import { isStandalone } from '../api/client'
 import { capteursAPI, GoveeDevice } from '../api/capteurs'
 import { stockAlertSeuilsAPI, StockAlertResult } from '../api/stockAlertSeuils'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -267,7 +268,7 @@ function ModuleStock({ stats, onClick }: { stats: DashboardFullStats; onClick: (
         {hasAlert && (
           <span className="flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
                            text-xs font-bold px-2 py-0.5 rounded-full border border-red-200 dark:border-red-700">
-            ⚠ {nbBocauxBas > 0 ? `${nbBocauxBas} bocal${nbBocauxBas > 1 ? 'x' : ''}` : 'Stock bas'}
+            ⚠ {nbBocauxBas > 0 ? `${nbBocauxBas} ${nbBocauxBas > 1 ? 'bocaux' : 'bocal'}` : 'Stock bas'}
           </span>
         )}
       </div>
@@ -624,10 +625,12 @@ export default function Dashboard() {
         <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">Vue d'ensemble de votre culture</p>
       </div>
 
-      {/* Ligne 1 : Capteurs Govee (pleine largeur) */}
-      <div className="grid grid-cols-1 gap-4">
-        <ModuleCapteurs onClick={() => navigate('/suivi-constantes')} />
-      </div>
+      {/* Ligne 1 : Capteurs Govee (pleine largeur) — masqué en mode autonome (serveur requis) */}
+      {!isStandalone() && (
+        <div className="grid grid-cols-1 gap-4">
+          <ModuleCapteurs onClick={() => navigate('/suivi-constantes')} />
+        </div>
+      )}
 
       {/* Ligne 1b : Traitements IPM actifs (conditionnel — masqué si aucun) */}
       <ModuleIPM onClick={() => navigate('/culture')} />

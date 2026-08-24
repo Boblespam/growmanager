@@ -6,6 +6,360 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-07-16] Fix | Page Stock — texte illisible sur carte de type sélectionnée en mode nuit
+
+**Demande (Pik) :** en dark mode, les cartes de filtre par type (Fleur / Hash / Rosin...) sélectionnées passaient sur fond clair (`bg-grow-50` / `bg-cyan-50`) mais le texte gardait ses variantes dark (blanc) → illisible.
+
+**Fait :** `frontend/src/pages/Stock.tsx` — les classes texte du poids et du compteur "x actifs" deviennent conditionnelles : si la carte est sélectionnée, texte foncé (`text-gray-800` / `text-gray-500`) sans variante dark ; sinon comportement inchangé. Appliqué aux deux grilles (onglet Stock et onglet Extractions). tsc OK.
+
+Validé 2026-07-16.
+
+---
+
+## [2026-07-16] Amélioration | Page Stock — Âge / Durée en affichage calendaire précis
+
+**Demande (Pik) :** la colonne Âge / Durée arrondissait grossièrement (46 jours → "1 mois", 365 jours → "1 an"). Afficher précisément : "1 mois et 3 jours", "1 an, 3 mois et 2 jours".
+
+**Fait :** `frontend/src/pages/Stock.tsx` — nouvelle fonction `preciseDiffLabel(startMs, endMs)` : diff calendaire années/mois/jours avec emprunt en boucle sur les mois précédents (gère fins de mois : 31/01 → 01/03 = "29 jours", et années bissextiles). `ageLabel()` et `durationLabel()` réécrites dessus. Cas particuliers : "< 1 jour" si même jour, "—" si date invalide ou future. Testé (8 cas) + tsc OK.
+
+**Note debug :** la modif ne s'affichait pas après `docker compose restart` — simple cache navigateur, résolu par Ctrl+F5 (Vite dev + volume mount fonctionnaient normalement).
+
+Validé 2026-07-16.
+
+---
+
+## [2026-07-09] Fix critique | version-bump.ps1 corrompait les fichiers (mojibake + BOM + troncature)
+
+Le premier run réel de `version-bump.ps1` (commit `c2f36eb`) a corrompu `frontend/package.json`, `frontend/package-lock.json`, `backend/app/main.py` et `CHANGELOG.md` — cassant `npm install`/`npm run build` en local et en CI (`docker-compose up --build` en échec chez Pik, run Docker Publish en échec sur GitHub).
+
+**3 problèmes cumulés, causés par `Get-Content`/`Set-Content` sans encodage explicite (comportement par défaut de Windows PowerShell 5.1 = ANSI, pas UTF-8) :**
+1. **Mojibake** : tous les caractères accentués de `main.py` et `CHANGELOG.md` corrompus (`é` → `Ã©` etc.)
+2. **BOM UTF-8** ajouté en tête des 4 fichiers (`Set-Content -Encoding UTF8` ajoute un BOM sur PS 5.1) → `npm error EJSONPARSE` (JSON.parse rejette le BOM)
+3. **Troncature** : `frontend/package.json` a perdu son accolade fermante finale après le passage du script (fichier invalide)
+
+**Réparation :**
+- Les 4 fichiers restaurés depuis le dernier commit propre (`9002496`, avant le premier run du script) + version 3.4.1 réappliquée proprement
+- `version-bump.ps1` réécrit : n'utilise plus jamais `Get-Content`/`Set-Content`, uniquement `[System.IO.File]::ReadAllText/WriteAllText` avec un encodage UTF8 sans BOM explicite (`New-Object System.Text.UTF8Encoding($false)`) — stable sur PS 5.1 et 7+
+- Garde-fou ajouté : si le fichier après remplacement est significativement plus court qu'avant (signe de troncature), le script annule et n'écrit rien
+- Testé en local (PowerShell 7 sandbox) avec du contenu accentué réaliste + un vrai `package-lock.json` de 4484 lignes avant redéploiement
+
+**Leçon :** un script qui touche des fichiers texte doit toujours spécifier l'encodage explicitement à la lecture ET à l'écriture — ne jamais faire confiance aux valeurs par défaut de la plateforme (PowerShell 5.1 vs 7 se comportent différemment, `Get-Content` par défaut n'est pas UTF-8 sur Windows). Voir aussi [[architecture/patterns]] section 10.
+
+---
+
+## [2026-07-09] Fix | Bump automatique — 2 bugs de mise en service corrigés
+
+Les deux premiers push après la mise en place du bump auto (v3.4.0) n'ont pas bumpé la version — deux causes distinctes, corrigées le même jour :
+
+1. **CI cassée** : le workflow `android-apk.yml` (ajout de l'AAB signé Play Store) utilisait `if: secrets.X != ''` sur 6 steps — GitHub Actions interdit le contexte `secrets` dans les conditions `if:` ("Unrecognized named-value: 'secrets'"), même au niveau step. Fix : variable d'env de job `HAS_PLAY_KEYSTORE` dérivée du secret, steps testent `env.HAS_PLAY_KEYSTORE == 'true'`.
+2. **Bump silencieusement ignoré** : `version-bump.js` (Node.js) ne trouvait pas `node` dans le PATH de la fenêtre `cmd.exe` ouverte par double-clic sur `push.bat` — tout le build Node du projet se fait côté CI, jamais en local sur la machine de Pik. Le script affichait bien un avertissement ("Node.js introuvable — bump ignoré") mais restait invisible tant que Pik n'a pas partagé le contenu de la fenêtre. Fix : réécriture complète en PowerShell (`version-bump.ps1`), natif Windows, zéro dépendance externe. Testé en local (patch/minor/major + cas sans `_commit_msg.txt`) avant livraison.
+
+**Leçon :** pour un script appelé depuis un `.bat` à double-clic, ne jamais supposer qu'un outil de dev (Node, Python...) est dans le PATH de cette fenêtre précise — vérifier ou rester en PowerShell/`.bat` pur.
+
+---
+
+## [2026-07-09] Feature | Distribution Google Play — Temps 1 (Test interne)
+
+**Décision (Pik) :** objectif final = app installable/mise à jour depuis le Play Store (fini le DL manuel GitHub). Mais palier 1 = juste supprimer l'alerte "app inconnue" à l'install, via Test interne Play Console.
+
+**Fait côté repo :**
+- Keystore de release généré (`growmanager-upload.keystore`, RSA 2048, alias `growmanager-upload`, validité 10 000 j) — remis à Pik hors repo, jamais commité
+- `.github/workflows/android-apk.yml` : nouvelles étapes conditionnelles (`if: secrets.GROWMANAGER_KEYSTORE_BASE64 != ''`) — décodage keystore, injection `signingConfigs.release` dans `android/app/build.gradle` (patch Python), `gradlew bundleRelease`, upload artifact `growmanager-aab` + attaché à la release GitHub si tag. Le build debug APK existant n'est pas touché.
+- 4 secrets GitHub Actions à créer par Pik : `GROWMANAGER_KEYSTORE_BASE64`, `GROWMANAGER_KEYSTORE_PASSWORD`, `GROWMANAGER_KEY_ALIAS`, `GROWMANAGER_KEY_PASSWORD`
+- Doc complète : [[features/mobile-app]] section "Distribution Google Play", plan Temps 1/2 dans [[roadmap]]
+
+**Reste à faire (Pik, manuel, hors repo) :** compte développeur Play Console (25$, vérif identité) → créer l'app `com.growmanager.app` → onglet Tests → Test interne → premier upload manuel de l'AAB (déclenche Play App Signing) → ajouter les testeurs par email → partager le lien d'opt-in.
+
+**Temps 2 (production publique)** noté dans [[roadmap]] mais pas démarré : nécessite un palier Test fermé (12 testeurs / 14 jours, distinct du Test interne) + fiche store complète.
+
+---
+
+## [2026-07-09] Fix process | Rattrapage version 3.3.0 → 3.4.0 + automatisation du bump
+
+**Constat (Pik) :** énormément de modifs livrées depuis v3.3.0 (63 commits, 15/05 → 09/07/2026 : Phase mobile A+B complètes, capteurs ESPHome, VPD foliaire, multi-clones, croisement open field, fixes coûts/dark mode/CI...) sans que la version n'ait jamais été incrémentée, alors que c'était demandé.
+
+**Cause :** le protocole "bumper la version à chaque validation" reposait sur un rappel manuel (moi, Claude) à chaque session — il a été oublié sur plusieurs sessions consécutives. Aucun mécanisme ne le garantissait.
+
+**Rattrapage :**
+- `frontend/package.json` + `package-lock.json` : 3.3.0 → 3.4.0
+- `backend/app/main.py` : 3.1.0 → 3.4.0 (était encore plus en retard, jamais resynchronisé depuis mai)
+- `CHANGELOG.md` : entrée `[3.4.0]` regroupant les 63 commits (voir fichier)
+- `roadmap.md` : Phase B (sprints B0-B6) marquée terminée (le doc disait encore "non démarré")
+
+**Automatisation (pour que ça ne se reproduise plus) :**
+- Nouveau `version-bump.js` (racine du repo) + appel depuis `push.bat` avant chaque commit
+- Détecte le type de bump depuis le préfixe conventional commit de `_commit_msg.txt` (`feat:`→minor, `fix:`/`chore:`/...→patch, `feat!:`/BREAKING→major)
+- Bump `package.json`+lockfile+`main.py` et transforme `[Unreleased]` du CHANGELOG en version datée, automatiquement, à chaque push
+- Détails : [[architecture/patterns]] section 10
+- `bump-version.bat` conservé pour override manuel exceptionnel uniquement
+
+---
+
+## [2026-07-06] Feature | Sprint B6 — finitions mode standalone — validé — Phase B complète
+
+- Photos en standalone : dep `@capacitor/filesystem` (lockfile régénéré, npm ci vérifié), `local/photos-fs.ts` (stockage Directory.Data/photos, localPhotoUrl via convertFileSrc, init au boot), `handlers/photos.ts` (upload FormData + liste filtrée + suppression fichier+DB). v1 : pas de compression ni thumbnail (thumbnail_path = filepath).
+- Capteurs masqués en autonome : module Dashboard, nav "Constantes (T°/VPD)" (filterForStandalone dans Layout), onglets Paramétrage "Capteurs" et "Sauvegarde et restaurations".
+- Doc : [[features/mobile-standalone]] créée (architecture src/local/, dual-mode, couverture, limites v1), liens dans mobile-app + index.
+- Restent en 501 : exports PDF (fiche culture, étiquettes QR, calendrier), exports/imports CSV.
+- **Phase B (B0→B6) terminée** — reste le test APK réel (Actions → Build Android APK).
+
+---
+
+## [2026-07-06] Feature | Sprint B5 — transverses en mode standalone — validé
+
+Portage dashboard.py, calendrier.py, search.py, consommation.py, historique_culture.py + cultures/compare :
+- `dashboard.ts` : stats complètes (6 modules), arrosage-boxes (+flush), burping-reminders (fréquences 1/3/7/14j), ipm-warnings (délai récolte, alerte rouge), legacy /dashboard. Capteurs Govee → null.
+- `transverses.ts` : calendrier global (mois + export plage + cultures-actives), recherche globale (5 catégories), cultures/compare complet (durées, rendements, coûts, LSO vs marques engrais, détail coût/recette, hauteurs, arrosages cumulés), historique cultures CRUD + plants + prix-graine.
+- `consommation.ts` : sessions CRUD + stats (périodes, par type/vapo, moyenne 7j, projection stock).
+- Vérifs : tsc + build + 25 requêtes SQL sur schéma réel. import/export CSV → B6.
+
+---
+
+## [2026-07-06] Feature | Sprint B4 — recettes & sol vivant en mode standalone — validé
+
+Portage des 6 routers recette_* + preparation_substrat, suivi_sol_vivant, croisement, open_field, notation_variete :
+- `recettes.ts` : factory générique (engrais/TCO/LSO/réamendement/arrosage/fermentation) — CRUD + lignes produits enrichies, remplacement des lignes en update. Export/import CSV → 501.
+- `sol-vivant.ts` : préparation substrat (JSON pots/résultat) + suivi pots avec coûts estimés (normalisation unités) et 5 collections d'événements ; déduction stock engrais sur ajout d'arrosage.
+- `croisement.ts` : pollen (péremption auto, décrément stock, blocage si utilisé) + croisements + finalisation récolte (variété résultante, breeder, pack maison, graines).
+- `open-field.ts` : projets/mères/pères + récolte mère (variété OF + pack + graines, statut projet auto).
+- `notation.ts` : scores calculés + tri note finale + extraction-stats par variété.
+- Vérifs : tsc + build + 27 requêtes SQL sur schéma réel.
+
+---
+
+## [2026-07-06] Feature | Sprint B3 — post-récolte en mode standalone — validé
+
+Portage sechage.py, curing.py, stock.py, stock_alert_seuils.py, extractions.py, vaporisateur.py + routes cultures liées :
+- `sechage-curing.ts` : sessions séchage/curing CRUD + plantes (statuts auto, lifecycle culture), WPFF complet (stock + action + archivage), cultures/sechage/plants enrichi, éligibles, plants-by-variete, stock-info, bocal-timeline.
+- `stock.ts` : CRUD enrichi, bocaux-disponibles, sortie, auto-clôture, origine (traçabilité complète), StockAlertSeuil CRUD + check + seed Fleur.
+- `extractions.ts` : rosin (multi-sources, déduction, stock Rosin lié id_stock_produit, synchro édition delta, ages_sources) + hash (Polinator/Ice-o-lator, stocks par maillage, stats).
+- `vaporisateur.ts` : CRUD + consommables + session (déduction stock) + stocks-vapo + marques/modeles.
+- Vérifs : tsc + build + 30 requêtes SQL sur schéma réel. Reste : B4 recettes, B5 transverses, B6 photos/PDF/CSV.
+
+---
+
+## [2026-07-05] Bugfix | CI — package-lock.json désynchronisé après ajout @capacitor-community/sqlite
+
+Le commit B0-B2 ajoutait la dépendance dans package.json sans régénérer le lockfile (npm install échouait sur le montage sandbox) → `npm ci` en erreur dans docker-publish (Dockerfile.prod) et android-apk. Fix : lockfile régénéré (`npm install --package-lock-only`, +273 lignes), `npm ci` vérifié en local.
+
+---
+
+## [2026-07-05] Feature | Sprint B2 — cœur culture en mode standalone — validé
+
+Portage de cultures.py (2910 lignes) + plan_culture.py en handlers TS locaux :
+- `cultures-helpers.ts` : enrichissements (culture/plant/action), conversion d'unités, coûts complets (électricité 18h/12h + intensité dimmer par lampe + prix kWh AppSettings, engrais recette×volume, graines, €/g), date récolte estimée, clôture auto, archivage HistoriqueCulture/HistoriquePlant, effets d'actions (germination, croissance, floraison + prévisions recolte_prevue, 12/12, récolte, curing, fin_curing → création Stock enrichie avec traçabilité, déduction stock engrais/TCO, rempotage).
+- `cultures.ts` : CRUD cultures (règles 1 culture active/espace + conflits pots 409), plants (CRUD, transfert, clonage multi, enraciner, clone-rate), actions (globale éclatée/ciblée/space_only), calendrier par mois, coûts, stats, utils (pots, transfer-targets, espaces-clone, recettes-sol, dernier-tco).
+- `plan-culture.ts` : plans + variétés + catalogue filtré + calcul nb pots.
+- `router.ts` : params :id* ne matchent que des chiffres (évite /cultures/pots avalé par /cultures/:id).
+- Vérifs : tsc + build + 33 requêtes SQL testées sur schéma réel.
+- Reportés : photos (Filesystem), exports PDF/CSV, compare (B5), sechage/curing/stock-info (B3).
+
+---
+
+## [2026-07-05] Feature | Sprint B1 — référentiels en mode standalone — validé
+
+Portage des routers référentiels en handlers TS locaux (`src/local/handlers/`) :
+- referentiels.ts (breeders, fournisseurs, variétés avec 409 + FK NULL), graines.ts (packs, packs/complet, ajustement graines, toggle, catalogue), materiel.ts (CRUD, filtre disponibles, age_jours, caracteristiques JSON), espaces.ts (CRUD + équipements + materiel-en-use), engrais.ts (CRUD + achats/recharger/vider-stock), parametres.ts (app-settings + listes).
+- `seeds.ts` : AppSettings + ~35 listes déroulantes insérées à la création de la base (miroir backend).
+- `helpers.ts` : one/count/insert/updateById/boolify/jsonify/ageJours.
+- Fix important : materiel/appSettings/parametres/historiqueCulture/photos utilisent l'axios global → adapter local aussi sur `axios.defaults` en standalone, avec passthrough réseau pour URLs absolues (test connexion serveur OK).
+- Vérifs : tsc + vite build + 15 requêtes SQL testées sur base SQLite créée du schéma.
+- Reste en 501 : cultures, dashboard, post-récolte, recettes, transverses, CSV, bocal-timeline.
+
+---
+
+## [2026-07-05] Feature | Sprint B0 — fondations mode standalone — validé
+
+Fondations du mode autonome (Phase B) :
+- `ModeSetup.tsx` remplace `ServerSetup.tsx` : choix Autonome/Serveur au 1er lancement natif (rétro-compat : URL serveur existante → mode serveur).
+- `client.ts` : clé `gm_mode`, `getAppMode`/`setAppMode`/`isStandalone`/`isNativeApp`, adapter local branché sur Axios en standalone.
+- `src/local/` : `schema.ts` (78 tables générées depuis les modèles SQLAlchemy, dialecte SQLite), `db.ts` (@capacitor-community/sqlite, migrations PRAGMA user_version), `router.ts` (routes + LocalHttpError), `adapter.ts` (Axios → dispatch local, 501 si route non portée). `/health` local.
+- Paramétrage → Général : section "Mode de fonctionnement" (boutons Autonome/Serveur, natif uniquement).
+- Vérification : tsc + build Vite OK (via copie /tmp, sync sandbox en retard).
+
+---
+
+## [2026-07-05] Roadmap | Phase B mode standalone — plan dual-mode validé
+
+Clarification et découpage de la Phase B dans [[roadmap]] :
+- **Dual-mode** : la Phase B s'ajoute au mode serveur (2 choix au 1er lancement : Standalone SQLite local ou Serveur local/distant, modifiable dans Paramétrage).
+- **Modes indépendants** : pas de sync, import/export JSON en passerelle manuelle.
+- **Architecture** : backend local TypeScript derrière adapter Axios, contrat `src/api/*.ts` inchangé, backend Python non touché.
+- Découpage en 7 sprints B0–B6 (fondations → référentiels → cœur culture → post-récolte → recettes/sol → transverses → limitations/polish).
+
+---
+
+## [2026-07-04] Maintenance | Wiki — harmonisation des préfixes de couche (database-/api-) — validé
+
+Suite du fix graph view : certains fichiers de `database/` et `api/` portaient le préfixe de couche, d'autres non — nommage incohérent et graphe ambigu (`culture` vs `cultures` vs `metier-cultures`).
+
+**Fix — 10 renommages pour que chaque note porte sa couche dans son nom** :
+- `database/culture.md` → `database-culture.md`, `equipment.md` → `database-equipment.md`, `sensors.md` → `database-sensors.md`, `spaces.md` → `database-spaces.md`, `stock.md` → `database-stock.md`
+- `database/schema-overview.md` → `database-overview.md` (symétrie avec `api-overview` / `frontend-overview`)
+- `api/cultures.md` → `api-cultures.md`, `calendrier.md` → `api-calendrier.md`, `infrastructure.md` → `api-infrastructure.md`, `stock-extractions.md` → `api-stock-extractions.md`
+
+Tous les `[[wikilinks]]` mis à jour, vérification : aucun lien cassé, chaque lien pointe vers un fichier existant. Convention désormais : `database-*`, `api-*`, `metier-*` ; les features restent sans préfixe (noms déjà uniques).
+
+---
+
+## [2026-07-04] Feature | Wiki — vue métier "Vue métier" (wiki/domains/) — validé
+
+Ajout d'une navigation par domaine fonctionnel (cultures, graines, recettes/sol vivant, stock/extractions, équipement/espaces, capteurs, photos, mobile) en complément du wiki technique (api/database/frontend), pour une lecture plus "parlante" côté humain.
+
+9 fichiers créés dans `wiki/domains/` : `metier-index.md` + 8 hubs (`metier-cultures.md`, `metier-graines.md`, `metier-recettes-sol-vivant.md`, `metier-stock-extractions.md`, `metier-equipement-espaces.md`, `metier-capteurs.md`, `metier-photos.md`, `metier-mobile-app.md`). Chaque hub liste les fonctionnalités en langage naturel puis renvoie vers le détail technique existant. Lien ajouté en tête de `wiki/index.md`.
+
+**Correction appliquée en cours de route** : les fichiers avaient d'abord été créés sans préfixe (`domains/cultures.md`, `domains/photos.md`, `domains/mobile-app.md`, `domains/stock-extractions.md`, `domains/index.md`) — collision de basename avec des fichiers existants (`api/cultures.md`, `features/photos.md`, `features/mobile-app.md`, `api/stock-extractions.md`, `wiki/index.md`), rendant le graph view à nouveau illisible (même symptôme que le fix précédent). Renommés avec préfixe `metier-` pour garantir l'unicité, tous les wikilinks mis à jour.
+
+---
+
+## [2026-07-04] Maintenance | Wiki — renommage fichiers ambigus pour le graph view Obsidian (validé)
+
+Le vault Obsidian ("2nd Brain" basé sur NicholasSpisak/second-brain) affichait un graph illisible : plusieurs dossiers (`api/`, `database/`, `frontend/`) réutilisaient les mêmes noms de fichiers génériques (`overview.md`, `recipes.md`, `planning.md`, `living-soil.md`, `graines.md`). Obsidian affiche le nom de fichier seul dans le graph view (pas le chemin), donc ces doublons apparaissaient comme des nœuds distincts mais indiscernables.
+
+**Fix — renommage en noms uniques et auto-descriptifs**, liens internes mis à jour :
+- `api/overview.md` → `api/api-overview.md`
+- `frontend/overview.md` → `frontend/frontend-overview.md`
+- `api/recipes.md` → `api/api-recipes.md`, `database/recipes.md` → `database/database-recipes.md`
+- `api/planning.md` → `api/api-planning.md`, `database/planning.md` → `database/database-planning.md`
+- `api/living-soil.md` → `api/api-living-soil.md`, `database/living-soil.md` → `database/database-living-soil.md`
+- `api/graines.md` → `api/api-graines.md`, `database/graines.md` → `database/database-graines.md`
+
+Tous les `[[wikilinks]]` (index.md + fichiers concernés) mis à jour en conséquence. Aucun lien cassé, plus aucun basename dupliqué dans `wiki/`.
+
+**Note :** "Sans titre.base" / "Sans titre.canvas" visibles isolés dans le graph = fichiers Obsidian par défaut, sans rapport avec le wiki — à supprimer manuellement dans Obsidian si besoin.
+
+---
+
+## [2026-07-04] Bugfix | Mobile — /health non proxifié + contenu caché derrière la bottom nav (validés)
+
+**Fix 1 — test de connexion "serveur injoignable"** alors que le navigateur marchait :
+l'app teste `GET <url>/health`, mais la route n'était relayée vers le backend nulle part.
+- `vite.config.ts` — proxy `/health` → backend (dev :5173)
+- `nginx.conf` (dev :80) — location `/health`
+- `frontend/Dockerfile.prod` — la config nginx prod ne proxifiait **rien** (ni /api, ni /uploads — contrairement au commentaire du compose ; la prod entière aurait été cassée) → ajout des 3 proxies + `client_max_body_size 20M`
+
+**Fix 2 — dernières lignes cachées derrière la bottom nav** (toutes pages) : bug 100vh mobile — `h-screen` dépasse la zone visible (barre URL / barre gestes / webview).
+- `index.css` — classe `.h-screen-safe` (100vh fallback + **100dvh**)
+- `Layout.tsx` — racine `h-screen-safe` + padding bas `calc(6rem + env(safe-area-inset-bottom))`
+- Desktop inchangé (100dvh = 100vh sur PC)
+
+**Règle de mise à jour APK** (documentée dans [[features/mobile-app]]) : fix backend/serveur → rien côté téléphone · fix interface → rebuild APK (Actions ou tag).
+
+---
+
+## [2026-07-04] Feature | Sprint Mobile A4 — App Android Capacitor + APK CI (validé) — Phase A complète
+
+- `frontend/capacitor.config.ts` — appId `com.growmanager.app`, webDir dist, androidScheme `http` + cleartext true (serveurs locaux/Tailscale sans mixed-content).
+- `package.json` — @capacitor/core+cli+android ^7 en devDeps · retrait `vite-plugin-pwa` (config obsolète : icône inexistante + collision avec le manifest statique A3) · lockfile régénéré · `vite.config.ts` nettoyé.
+- `ServerSetup.tsx` (nouveau) — écran premier lancement natif : saisie URL + test `/health` + reload. Gate dans `App.tsx` via `window.Capacitor.isNativePlatform()` + `getServerUrl()`.
+- `photos.ts` (`photoUrl`) + `calendarPdfExport.ts` — URLs `/uploads` via `serverFileURL()`/`getServerUrl()` pour le mode distant.
+- `frontend/assets/` — icon.png 1024 + splash.png 2732 générés depuis `IconSeul.png` (source pour `@capacitor/assets`).
+- `.github/workflows/android-apk.yml` — build APK debug sur workflow_dispatch ou tag `vX.Y.Z` : npm ci → build → cap add android → assets generate → gradlew assembleDebug → artifact + release. Premier run : ✅ Success 2m30s. Node 20→22 (dépréciation runners).
+- `.gitignore` — frontend/android/, frontend/icons/, *.apk.
+- Wiki : [[features/mobile-app]] créé (architecture, build, procédure Tailscale détaillée) + index.
+- **Phase A terminée** : app mobile Android connectée au serveur auto-hébergé. Phase B (autonome SQLite) au backlog.
+
+---
+
+## [2026-07-04] Feature | Sprint Mobile A3 — URL serveur configurable + PWA (validé)
+
+**URL serveur configurable**
+- `api/client.ts` — nouvelles fonctions exportées : `getServerUrl()` / `setServerUrl()` (clé localStorage `gm_server_url`), `apiBaseURL()` (vide → `/api` inchangé ; renseignée → `<url>/api`), `serverFileURL(path)` (pour `/uploads/...` en distant), `testServerConnection(url)` (GET `<url>/health`, timeout 5s).
+- `Parametrage.tsx` — section "Serveur (app mobile)" dans l'onglet Général : input URL + bouton Tester + Enregistrer (reload auto pour recharger le client Axios).
+
+**PWA**
+- `frontend/public/manifest.webmanifest` — standalone, portrait, theme `#2d6a4f`.
+- Icônes générées depuis `IconSeul.png` : `pwa-192.png`, `pwa-512.png`, `pwa-512-maskable.png` (fond brand, logo 62%).
+- `index.html` — `<link rel="manifest">`, apple-touch-icon → pwa-192, viewport `viewport-fit=cover`.
+- ⚠ Limite connue : install PWA "standalone" Chrome Android exige HTTPS ; en `http://IP` locale = raccourci simple. L'APK Capacitor (A4) n'a pas cette contrainte.
+
+---
+
+## [2026-07-04] Feature | Sprint Mobile A2 batch 2 — pages restantes responsive (validé)
+
+Audit des 24 pages restantes : la plupart déjà conformes (headers `flex-col lg:flex-row` ou `flex-wrap`, tables `overflow-auto`, grilles avec breakpoints). Corrections :
+- `Croisement.tsx` — header `flex-wrap gap-3` + table croisements `overflow-hidden` → `overflow-x-auto`
+- `SuiviConstantes.tsx` — header `flex-wrap gap-3` (boutons Import CSV / Lire maintenant)
+- `Consommation.tsx` — header `flex-wrap gap-3` (bouton Nouvelle session)
+- Graines / Extractions (prioritaires Pik) : déjà conformes, aucun changement
+- Cas limites laissés tels quels (tiennent sur 360px) : mini-grilles stats 3-4 col (Statistiques, Culture, Materiel, durées SechageCuring)
+- `tsc --noEmit` OK · Sprint A2 complet validé
+
+---
+
+## [2026-07-04] Feature | Sprint Mobile A2 batch 1 — 4 pages principales responsive (validé)
+
+- `CalendrierGlobal.tsx` — `DayCell` mode compact mobile (< `sm`) : pastilles colorées par type d'action (couleur culture si event unique, gris si groupe), cellules `min-h-[52px]`, tap jour → DayModal. Chips détaillées inchangées ≥ `sm`.
+- `Culture.tsx` — modal Dates clés : `max-h-[90vh] overflow-y-auto`.
+- `Parametrage.tsx` — modal confirmation import : idem.
+- Dashboard et Stock audités : déjà responsive (grilles breakpoints, tables `overflow-auto`), aucun changement.
+- Compilation `tsc --noEmit` OK. Zéro impact desktop.
+
+---
+
+## [2026-07-04] Feature | Sprint Mobile A1 — bottom nav + modals (validé)
+
+Lancement de la **Phase Mobile** (plan "A puis B" validé — voir section dédiée dans [[roadmap]]).
+
+**Sprint A1 livré :**
+- `Layout.tsx` — bottom nav mobile refaite : 4 raccourcis (Dashboard, Culture, Calendrier, Stock) + bouton "Plus" ouvrant la sidebar mobile. Remplace l'aplatissement des 28 items. Safe-area `env(safe-area-inset-bottom)`.
+- `NouveauSessionVapoModal.tsx` — ajout `max-h-[90vh] overflow-y-auto` (seule modal sur 39 sans le pattern standard).
+- Zéro impact desktop (breakpoints `lg:` inchangés). Compilation `tsc --noEmit` OK.
+
+**Wiki :** section Phase Mobile dans [[roadmap]] + section bottom nav dans [[frontend/frontend-overview]].
+
+---
+
+## [2026-07-04] Bugfix | Coquille "bocalx" → "bocaux" (pluriel)
+
+**Bug corrigé :** Le badge d'alerte stock du Dashboard et le bouton de confirmation d'ouverture bocaux dans SechageCuring affichaient "2 bocalx" au lieu de "2 bocaux".
+
+**Cause :** Pluralisation naïve `bocal${n > 1 ? 'x' : ''}` — ajoute un "x" à "bocal" au lieu du vrai pluriel français "bocaux" (pluriel irrégulier).
+
+**Fix :** Remplacé par un ternaire complet sur le mot entier : `${n > 1 ? 'bocaux' : 'bocal'}`.
+
+**Fichiers modifiés :**
+- `frontend/src/pages/Dashboard.tsx` (l.270) — badge alerte stock
+- `frontend/src/pages/SechageCuring.tsx` (l.888) — bouton "Ouvrir X bocaux"
+
+---
+
+## [2026-06-24] Feature | Âge de la plante lors de l'extraction Rosin
+
+### Besoin
+Dans la fiche d'une extraction Rosin (Extractions → clic sur une extraction), afficher l'âge **figé** de la plante au moment de l'extraction = `date d'extraction − date de fin de curing`. Valeur qui ne bouge jamais (ne dépend pas de la date du jour). Affichage juste avant les Notes.
+
+### Modifications
+- **Backend** (`extractions.py`) : helpers `_age_source_for_stock()` + `_build_ages_sources()` ; remonte `id_stock_source`/`sources[]` → `Stock.id_plant` → `Plant` → dernière `PlantCuring` clôturée. Une entrée par source (ids dédoublonnés).
+- **Schéma** (`schemas/extraction.py`) : nouveau `AgeSource` + champ `RosinExtractionRead.ages_sources`.
+- **Frontend** : section « Âge lors de l'extraction » dans `ExtractionDetailModal.tsx` (avant Notes) ; format `21 jours` / `84 jours (~3 mois)` au-delà de 45 j ; `AgeSource` + champ dans `api/stock.ts` (exclu des payloads create/update).
+- **Fallbacks** : « Plante source non liée » (pas de `Stock.id_plant`) / « Fin de curing non renseignée » (curing non clôturé).
+- Aucune migration DB.
+
+### Wiki
+- `api/stock-extractions.md` — section « Âge lors de l'extraction (2026-06-24) »
+- `database/stock.md` — note enrichissement `ages_sources` sous RosinExtraction
+
+---
+
+## [2026-06-17] Feature | Édition d'extraction Rosin + maillage obligatoire
+
+### Besoin
+Une extraction Rosin a pu être validée sans maillage. Deux demandes : (1) pouvoir modifier une extraction depuis la liste (notamment maillage et poids sortie), (2) rendre le maillage obligatoire.
+
+### Modifications
+- **Maillage obligatoire** : `RosinExtractionCreate`/`RosinExtractionUpdate` → `maillage: str` ; garde backend (400 si vide) dans `create`+`update` ; `<select required>` + validation JS dans les deux modals.
+- **Endpoint `PUT /api/rosin/{id}`** (`update_rosin_extraction`) : édite tous les paramètres, **ne re-déduit pas** les stocks sources, **synchronise le stock Rosin produit** (quantité par delta + maillage).
+- **Lien extraction ↔ stock produit** : nouvelle colonne `RosinExtraction.id_stock_produit` (posée à la création après `flush`). Rétrocompat : best-effort par date+maillage+quantité pour les anciennes extractions.
+- **Frontend** : nouveau `EditExtractionModal.tsx` (édition complète préremplie) ; bouton crayon ✏️ sur chaque ligne `Extractions.tsx` ; `rosinAPI.update()` dans `api/stock.ts`.
+- **Migration auto** : `("RosinExtraction", "id_stock_produit", "ALTER TABLE RosinExtraction ADD COLUMN id_stock_produit INT")` ajoutée à `run_migrations()` dans `main.py` → créée au prochain démarrage backend, aucun SQL manuel.
+
+### Wiki
+- `api/stock-extractions.md` — endpoint PUT + section édition/maillage
+- `database/stock.md` — colonnes `id_stock_produit` et `maillage` obligatoire
+
+---
+
 ## [2026-06-04] Bugfix | Migration manquante : Stock.substrat_type
 
 ### Problème
@@ -422,14 +776,4 @@ Explored entire GrowManager codebase (backend + frontend + docs) and bootstrappe
 Merge de la **PR #4** (contributeur externe Boblespam) : fix du calcul des coûts LSO, réamendements et arrosages dans `suivi_sol_vivant.py` — normalisation des unités (mL/L/g/Kg) avant le ratio `prix_achat / volume_conditionnement`, et prise en compte de `volume_eau_l` pour les arrosages. Audit complet ensuite : le même bug existait ailleurs.
 
 ### Bugfixes (suite de l'audit)
-- **`cultures.py` — 3 calculs de coût engrais** (`_compute_culture_cost` ~l.480, détail coût par recette dans `/compare` ~l.1053, coût d'un arrosage individuel ~l.2422) : le prix était divisé par `volume_conditionnement` sans tenir compte de `unite_volume` → coûts surévalués ×1000 pour les produits conditionnés en L ou Kg (ex. flacon 1 L à 30 € compté 30 €/mL au lieu de 0,03 €/mL)
-- **Déductions de stock** : `quantite_stock` était décrémenté d'une quantité en mL/g sans conversion vers `unite_quantite` du produit (faux ×1000 si stock saisi en L ou Kg). Corrigé dans `cultures.py` (arrosage_engrais l.844, preparation_tco l.867) et `suivi_sol_vivant.py` (`add_arrosage`)
-
-### Implémentation
-- Helpers partagés par fichier : `_UNIT_FACTORS` (mL/L/cL/g/Kg), `_to_small_unit()` (normalise vers mL ou g, gère les unités composées 'mL/L' → 'mL'), `_prix_par_petite_unite()` (cultures.py), `_deduire_stock()` (conversion bidirectionnelle : quantité ligne → petite unité → réécriture dans l'unité du stock)
-- Même logique que `culture_helpers.py` (déjà correct) et que le `toBase()`/`norm()` du frontend (déjà correct partout)
-- Exception volontaire : liste manuelle legacy (`cultures.py` l.869) — quantité saisie sans unité, supposée dans l'unité du stock
-
-### Files modified
-- `backend/app/routers/cultures.py` — helpers unités + 3 fix coûts + 2 fix déductions stock
-- `backend/app/routers/suivi_sol_vivant.py` — `_deduire_stock()` + fix déduction dans `add_arrosage` (en plus de la PR #4 mergée)
+- **`cultures.py` — 3 calculs de coût engrais** (`_compute_culture_cost` ~l.480, détail coût par recette dans `/compare` ~l.1053, coût d'un arrosage individuel ~l.2422) : le prix était divisé par `volume
