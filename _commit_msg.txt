@@ -1,6 +1,11 @@
-docs: wiki - historique des emplacements de culture (merge PR #6)
+fix(ci): publie aussi le tag :latest sur ghcr.io (docker-publish.yml)
 
-Documente la nouvelle table CultureEmplacement, les endpoints de
-deplacement/correction de date, et le comportement du calendrier qui
-resout desormais l'espace par date via l'historique plutot que via
-l'espace courant de la culture.
+Le workflow ne taguait les images backend/frontend qu'avec main et
+sha-xxxxx a chaque push sur main, jamais latest (le flavor latest de
+docker/metadata-action ne se declenche par defaut que sur un tag Git
+semver). update.sh latest echouait donc en prod avec "manifest
+unknown" sur le nouveau serveur Linux dedie.
+
+Ajout de flavor: latest=true sur les deux jobs Docker meta (backend
+et frontend). Wiki mis a jour : section Production (serveur dedie,
+deploiement pull-based) et log.

@@ -6,6 +6,22 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-09-12] Fix ci | Workflow Docker Publish ne taguait jamais `:latest`
+
+**Contexte :** passage du serveur de prod sur une machine Linux dédiée (`192.168.1.156`, accès `ssh clapie`), dépôt cloné dans `~/growmanager`. Premier `./update.sh latest` en échec : `Error response from daemon: manifest unknown`.
+
+**Cause :** `.github/workflows/docker-publish.yml` ne taguait les images `ghcr.io/mdf73/growmanager-{backend,frontend}` qu'avec `main` (branche) et `sha-xxxxx` (commit) à chaque push sur `main`. Le tag `latest` de `docker/metadata-action` n'est ajouté automatiquement que sur un tag Git semver (`vX.Y.Z`), jamais sur un simple push de branche — alors que `update.sh` et la doc supposaient `:latest` toujours disponible.
+
+**Fix :** ajout de `flavor: | latest=true` dans les deux blocs "Docker meta" (Backend et Frontend) de `docker-publish.yml`. Chaque build sur `main` publie désormais aussi `:latest`, en plus de `:main` et `:sha-xxxxx`.
+
+**Contournement utilisé le temps du fix :** `./update.sh main` (le tag `main` existait déjà et pointait sur le bon commit).
+
+**Fichiers modifiés :** `.github/workflows/docker-publish.yml`, `wiki/overview.md` (section Production mise à jour : serveur dédié + déploiement pull-based).
+
+Validé 2026-09-12.
+
+---
+
 ## [2026-07-16] Fix | Page Stock — texte illisible sur carte de type sélectionnée en mode nuit
 
 **Demande (Pik) :** en dark mode, les cartes de filtre par type (Fleur / Hash / Rosin...) sélectionnées passaient sur fond clair (`bg-grow-50` / `bg-cyan-50`) mais le texte gardait ses variantes dark (blanc) → illisible.

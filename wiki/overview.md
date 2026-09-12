@@ -48,19 +48,22 @@ docker exec -it growmanager-db-1 mysql -u root -p growmanager
 
 ### Production (Linux)
 
-Premier déploiement :
+Serveur dédié à `192.168.1.156`, accès `ssh clapie` (alias SSH configuré sur le poste Windows). Dépôt cloné dans `~/growmanager`.
+
+Déploiement **pull-based** depuis les images pré-buildées sur GHCR (`docker-compose.prod.yml`) — pas de build sur le serveur :
+
 ```bash
-git clone <repo>
-cp .env.example .env   # puis éditer les mots de passe
-docker compose -f docker-compose.server.yml up -d --build
+./update.sh latest   # ou ./update.sh vX.Y.Z pour figer une version précise
 ```
 
-Mises à jour suivantes (après un push depuis Windows) :
-```bash
-./update.sh
-```
+> `update.sh` fait : `docker compose -f docker-compose.prod.yml pull` (images `backend`+`frontend`) puis `up -d --no-deps backend frontend`. La base de données n'est jamais redémarrée.
 
-> `update.sh` fait : `git pull` + `docker compose -f docker-compose.server.yml up -d --build` + vérification des conteneurs.
+**Workflow complet de mise à jour prod :**
+1. Sur le PC Windows : double-clic sur `push.bat` (commit + bump de version auto + push vers `main`)
+2. Attendre la fin du workflow GitHub Actions "Build & Publish Docker images" — publie `ghcr.io/mdf73/growmanager-{backend,frontend}` avec les tags `latest`, `main`, `sha-xxxxx` (et les tags semver sur un tag Git `vX.Y.Z`)
+3. `ssh clapie` puis `cd growmanager && ./update.sh latest`
+
+> `docker-compose.server.yml` (build depuis les sources, utilisé pour un tout premier déploiement sans registre) reste dispo mais n'est plus le flux courant depuis le passage sur ce serveur dédié.
 
 ## Key File Paths
 
