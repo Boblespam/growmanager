@@ -1,15 +1,10 @@
-docs(wiki): documente la panne credentials update.sh sur le serveur prod
+chore: retire growmanager_dump.sql du suivi git
 
-update.sh ne passe pas --env-file .env.production, Compose ne charge
-que .env : le backend recree recuperait des identifiants MySQL par
-defaut au lieu des vrais, alors que le conteneur db (jamais redemarre
-par update.sh) garde le vrai mot de passe. Panne survenue le
-2026-09-12 juste apres un update.sh latest.
+Le dump SQL (4.5 Mo, donnees personnelles de culture) avait ete commite
+par erreur (le rm --cached + gitignore precedent n'avait pas ete
+correctement stage avant le commit --amend). Retire du suivi et
+ajoute a .gitignore (*.sql, avec exception pour backend/init.sql et
+les scripts de migration versionnes) pour que ca ne se reproduise pas.
 
-Resolu en prod : mot de passe root MySQL retrouve via docker inspect
-(env vars figees a la creation du conteneur), compte grow realigne
-sur .env.production, puis ln -sf .env.production .env sur le serveur
-pour que docker compose charge les bonnes variables automatiquement.
-
-Wiki : nouveau piege documente dans architecture/infrastructure-prod.md
-section 6 + entree log + avertissement ajoute dans overview.md.
+Fichier conserve localement (untracked) sur le PC Windows et sur le
+serveur de prod, juste retire de git.

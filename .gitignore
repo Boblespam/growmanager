@@ -41,6 +41,9 @@ frontend/icons/
 # ========================
 mysql_data/
 docker/data/
+*.sql
+!backend/init.sql
+!migration_*.sql
 
 # ========================
 # OS & IDE
