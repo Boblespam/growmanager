@@ -1,9 +1,6 @@
-fix(stock): texte lisible sur carte de type sélectionnée en dark mode
+docs: wiki - historique des emplacements de culture (merge PR #6)
 
-En mode nuit, les cartes de filtre par type (Fleur/Hash/Rosin...) sélectionnées
-passaient sur fond clair mais gardaient le texte blanc (variantes dark:) → illisible.
-Le poids et le compteur "x actifs" passent en texte foncé quand la carte est
-sélectionnée, sur les grilles Stock et Extractions.
-
-- frontend/src/pages/Stock.tsx : classes texte conditionnelles selon sélection
-- wiki/log.md : entrée du fix
+Documente la nouvelle table CultureEmplacement, les endpoints de
+deplacement/correction de date, et le comportement du calendrier qui
+resout desormais l'espace par date via l'historique plutot que via
+l'espace courant de la culture.

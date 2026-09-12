@@ -770,6 +770,29 @@ Explored entire GrowManager codebase (backend + frontend + docs) and bootstrappe
 - `frontend/src/App.tsx` — route `/comparaison-cultures`
 - `frontend/src/components/Layout.tsx` — nav sous-menu Culture
 
+## [2026-09-12] Historique des emplacements de culture
+
+Merge de la **PR #6** (contributeur externe Devilouned) : `git pull` avant lecture, revue et merge de deux PR indépendantes du même contributeur (voir aussi PR #5, corrections demandées, non mergée en l'état).
+
+### Nouvelles fonctionnalités
+- **`CultureEmplacement`** (nouvelle table) : historique des affectations culture ↔ espace, en intervalles `[date_debut, date_fin)`. Voir [[database/database-spaces]].
+- **`POST /api/cultures/{id}/deplacer`**, **`PUT /api/cultures/{id}/emplacements/{id}`**, **`GET /api/cultures/{id}/emplacements`**, **`GET /api/cultures/{id}/espace-at`** : nouveaux endpoints de gestion/consultation de l'historique.
+- **`DeplacerCultureModal`** et **`ModifierDateEmplacementModal`** (page Culture) : UI de déplacement entre espaces et de correction de date, avec blocage si l'espace cible est déjà occupé par une culture active.
+- **Calendrier / export PDF** : les courbes capteurs (`SensorDayChart`) et l'export PDF résolvent désormais l'espace réellement occupé à chaque date via l'historique, au lieu de l'espace actuel de la culture — utile pour les cultures qui changent de box entre croissance et floraison.
+- **Suppression d'espace bloquée (409)** si l'espace est encore utilisé par une culture ou apparaît dans l'historique d'une culture.
+- **Backfill automatique** : `seed_culture_emplacements()` (backend) et migration SQLite `SCHEMA_VERSION` 1→3 (app standalone) créent rétroactivement l'affectation initiale des cultures existantes à partir de leur espace courant.
+
+### Files modified
+- `backend/app/models/all_models.py`, `backend/app/models/__init__.py` — modèle `CultureEmplacement`
+- `backend/app/main.py` — `seed_culture_emplacements()` au démarrage
+- `backend/app/routers/culture_helpers.py` — logique d'intervalles (`ensure_initial_emplacement`, `deplacer_culture`, `corriger_date_emplacement`, `espace_id_at`)
+- `backend/app/routers/cultures.py`, `backend/app/routers/espaces.py`, `backend/app/schemas/culture.py` — nouveaux endpoints, garde de suppression, schémas
+- `frontend/src/pages/Culture.tsx`, `frontend/src/components/culture/DeplacerCultureModal.tsx`, `frontend/src/components/culture/ModifierDateEmplacementModal.tsx`, `frontend/src/components/culture/CalendrierCulture.tsx`, `frontend/src/utils/cultureEmplacement.ts`, `frontend/src/api/cultures.ts` — UI et résolution d'espace par date
+- `frontend/src/local/db.ts`, `frontend/src/local/schema.ts`, `frontend/src/local/handlers/cultures.ts`, `frontend/src/local/handlers/cultures-helpers.ts`, `frontend/src/local/handlers/espaces.ts` — miroir complet côté app standalone (mode hors-ligne)
+
+### À faire
+- Pas de tests backend automatisés sur `culture_helpers.py` pour cette logique d'intervalles (chevauchements, dates aux bornes) — à ajouter si on retouche cette zone.
+
 ## [2026-06-11] Normalisation des unités — coûts & déductions de stock
 
 ### Contexte
