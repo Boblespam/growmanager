@@ -6,6 +6,32 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-09-12] Incident prod | Panne auth MySQL après `update.sh` — `.env.production` jamais lu
+
+**Symptôme :** dashboard en échec de chargement juste après un `./update.sh latest` pourtant réussi côté script. Logs backend : `Access denied for user 'grow'@'172.18.0.2'`.
+
+**Cause :** `update.sh` appelle `docker compose -f docker-compose.prod.yml` sans `--env-file .env.production` — Compose ne charge que `.env` par défaut, donc le backend recréé retombe sur les identifiants MySQL par défaut du compose file au lieu des vrais, alors que `db` (jamais redémarré par `update.sh`) garde le vrai mot de passe.
+
+**Résolu :** vrai mot de passe root retrouvé via `docker inspect growmanager-db-1` (les env vars de création restent lisibles même si `.env.production` a changé depuis), compte `grow` réaligné sur `.env.production`, puis `ln -sf .env.production .env` sur le serveur pour que `docker compose` charge automatiquement les bonnes variables à l'avenir. Conteneur recréé (`up -d --force-recreate`, un simple `restart` ne suffit pas — variables figées à la création).
+
+**Détail complet, y compris la commande exacte de récupération du mot de passe root :** [[architecture/infrastructure-prod]] section 6.
+
+**Fichiers modifiés :** `wiki/architecture/infrastructure-prod.md` (nouveau piège documenté).
+
+Validé 2026-09-12.
+
+---
+
+## [2026-09-12] Documentation | Infrastructure serveur de production (PC atelier)
+
+**Contexte :** fiche technique du serveur de prod extraite du suivi du projet Home Assistant du Clapié (mise en place réalisée le 09/09/2026), intégrée au wiki GrowManager.
+
+**Ajouté :** nouvelle page [[architecture/infrastructure-prod]] — specs serveur (PC atelier, Ubuntu 24.04.5 LTS, `192.168.1.156` en IP réservée DHCP, Docker 29.6.1 / Compose v5.3.1), accès SSH (`ssh clapie`, clé `id_ed25519`), table des ports (GrowManager + Home Assistant `8123` en `--network=host` colocalisé sans conflit, Pi-hole `53`/`8081`), étapes de migration dev→prod (dump SQL + `backend/uploads` via `scp`, vérification d'intégrité par comptage), config Pi-hole (DNS local abandonné au profit de l'accès par IP), et 4 pièges rencontrés documentés pour référence future : redirection `mysqldump` sous PowerShell (UTF-16), volume MySQL figeant `MYSQL_ROOT_PASSWORD`, réutilisation d'image Docker dev/prod (toujours `--build --remove-orphans`), et corruption d'encodage CP850 lors de l'export/import (détection par marqueurs hexadécimaux + requête `CONVERT` de correction).
+
+**Files modified :** `wiki/architecture/infrastructure-prod.md` (nouveau), `wiki/overview.md` (section Production enrichie + lien), `wiki/index.md` (lien ajouté sous Architecture).
+
+---
+
 ## [2026-09-12] Fix ci | Workflow Docker Publish ne taguait jamais `:latest`
 
 **Contexte :** passage du serveur de prod sur une machine Linux dédiée (`192.168.1.156`, accès `ssh clapie`), dépôt cloné dans `~/growmanager`. Premier `./update.sh latest` en échec : `Error response from daemon: manifest unknown`.

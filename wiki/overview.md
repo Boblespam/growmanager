@@ -48,7 +48,7 @@ docker exec -it growmanager-db-1 mysql -u root -p growmanager
 
 ### Production (Linux)
 
-Serveur dédié à `192.168.1.156`, accès `ssh clapie` (alias SSH configuré sur le poste Windows). Dépôt cloné dans `~/growmanager`.
+Serveur dédié (PC atelier, Ubuntu 24.04.5 LTS) à `192.168.1.156` (IP réservée en DHCP sur la box), accès `ssh clapie` (alias SSH configuré sur le poste Windows). Dépôt cloné dans `~/growmanager`. Détails serveur complets (specs, ports, services colocalisés, pièges rencontrés) : [[architecture/infrastructure-prod]].
 
 Déploiement **pull-based** depuis les images pré-buildées sur GHCR (`docker-compose.prod.yml`) — pas de build sur le serveur :
 
@@ -57,6 +57,8 @@ Déploiement **pull-based** depuis les images pré-buildées sur GHCR (`docker-c
 ```
 
 > `update.sh` fait : `docker compose -f docker-compose.prod.yml pull` (images `backend`+`frontend`) puis `up -d --no-deps backend frontend`. La base de données n'est jamais redémarrée.
+
+> ⚠️ `update.sh` ne passe pas `--env-file .env.production` — Compose ne charge que `.env`. Un lien symbolique `.env → .env.production` doit exister à la racine du repo sur le serveur, sinon le backend recréé retombe sur des identifiants MySQL par défaut et casse l'authentification (voir [[architecture/infrastructure-prod]] section 6, incident du 2026-09-12).
 
 **Workflow complet de mise à jour prod :**
 1. Sur le PC Windows : double-clic sur `push.bat` (commit + bump de version auto + push vers `main`)
@@ -123,6 +125,7 @@ Migrations: no Alembic — startup `run_migrations()` in `main.py` runs `ALTER T
 
 - [[architecture/stack]] — detailed architecture breakdown
 - [[architecture/patterns]] — key development patterns
+- [[architecture/infrastructure-prod]] — serveur de production : specs, ports, services colocalisés, pièges rencontrés
 - [[database/database-overview]] — all DB tables
 - [[frontend/frontend-overview]] — page routing and component structure
 - [[roadmap]] — pending features and TODOs

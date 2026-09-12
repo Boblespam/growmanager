@@ -1,11 +1,15 @@
-fix(ci): publie aussi le tag :latest sur ghcr.io (docker-publish.yml)
+docs(wiki): documente la panne credentials update.sh sur le serveur prod
 
-Le workflow ne taguait les images backend/frontend qu'avec main et
-sha-xxxxx a chaque push sur main, jamais latest (le flavor latest de
-docker/metadata-action ne se declenche par defaut que sur un tag Git
-semver). update.sh latest echouait donc en prod avec "manifest
-unknown" sur le nouveau serveur Linux dedie.
+update.sh ne passe pas --env-file .env.production, Compose ne charge
+que .env : le backend recree recuperait des identifiants MySQL par
+defaut au lieu des vrais, alors que le conteneur db (jamais redemarre
+par update.sh) garde le vrai mot de passe. Panne survenue le
+2026-09-12 juste apres un update.sh latest.
 
-Ajout de flavor: latest=true sur les deux jobs Docker meta (backend
-et frontend). Wiki mis a jour : section Production (serveur dedie,
-deploiement pull-based) et log.
+Resolu en prod : mot de passe root MySQL retrouve via docker inspect
+(env vars figees a la creation du conteneur), compte grow realigne
+sur .env.production, puis ln -sf .env.production .env sur le serveur
+pour que docker compose charge les bonnes variables automatiquement.
+
+Wiki : nouveau piege documente dans architecture/infrastructure-prod.md
+section 6 + entree log + avertissement ajoute dans overview.md.
