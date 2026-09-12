@@ -36,6 +36,16 @@ export interface Culture {
   jours_depuis_dernier_arrosage?: number
   jours_depuis_dernier_tco?: number
   total_recolte_g?: number | null
+  emplacements?: CultureEmplacement[]
+}
+
+export interface CultureEmplacement {
+  id_emplacement: number
+  id_culture: number
+  id_espace: number
+  nom_espace?: string | null
+  date_debut: string
+  date_fin?: string | null
 }
 
 export interface CultureWithDetails extends Culture {
@@ -306,6 +316,17 @@ export const cultureAPI = {
     client.delete(`/cultures/${id}`),
   close: (id: number) =>
     client.post<Culture>(`/cultures/${id}/close`),
+  deplacer: (id: number, data: { id_espace: number; date_deplacement: string }) =>
+    client.post<Culture>(`/cultures/${id}/deplacer`, data),
+  getEmplacements: (id: number) =>
+    client.get<CultureEmplacement[]>(`/cultures/${id}/emplacements`),
+  corrigerDateEmplacement: (id: number, emplacementId: number, date_debut: string) =>
+    client.put<Culture>(`/cultures/${id}/emplacements/${emplacementId}`, { date_debut }),
+  getEspaceAt: (id: number, date: string) =>
+    client.get<{ id_espace: number | null; nom_espace: string | null; date: string }>(
+      `/cultures/${id}/espace-at`,
+      { params: { date } },
+    ),
   getCout: (id: number) =>
     client.get<CultureCout>(`/cultures/${id}/cout`),
   getSechagePlants: () =>

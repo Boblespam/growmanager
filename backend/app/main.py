@@ -265,6 +265,35 @@ def seed_parametres():
 
 seed_parametres()
 
+def seed_culture_emplacements():
+    """Affectation initiale = espace actuel à date_debut. Aucun déplacement inventé."""
+    from datetime import date as _date
+    from app.models import Culture, CultureEmplacement
+    db = _SessionLocal()
+    try:
+        cultures = db.query(Culture).filter(Culture.id_espace.isnot(None)).all()
+        for c in cultures:
+            exists = (
+                db.query(CultureEmplacement)
+                .filter(CultureEmplacement.id_culture == c.id_culture)
+                .first()
+            )
+            if exists:
+                continue
+            db.add(CultureEmplacement(
+                id_culture=c.id_culture,
+                id_espace=c.id_espace,
+                date_debut=c.date_debut or _date.today(),
+                date_fin=None,
+            ))
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+seed_culture_emplacements()
+
 # Inclusion des routers
 app.include_router(breeders.router)
 app.include_router(varietes.router)

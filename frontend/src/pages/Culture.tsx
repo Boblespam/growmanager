@@ -3,9 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, ArrowLeft, Leaf, Calendar, Users, BarChart2,
   Flower2, Droplets, Sun, Clock, X, CheckCircle, Trash2, AlertTriangle, Loader2,
-  Pencil, Check, Camera, FileDown,
+  Pencil, Check, Camera, FileDown, MapPin,
 } from 'lucide-react'
-import { cultureAPI, Culture, CultureWithDetails, CultureCreate } from '../api/cultures'
+import { cultureAPI, Culture, CultureWithDetails, CultureCreate, CultureEmplacement } from '../api/cultures'
 import { photosAPI } from '../api/photos'
 import { getCalendrierExport } from '../api/calendrier'
 import { capteursAPI } from '../api/capteurs'
@@ -16,6 +16,9 @@ import PlantesTab from '../components/culture/PlantesTab'
 import StatsTab from '../components/culture/StatsTab'
 import NouvellerCultureModal from '../components/culture/NouvellerCultureModal'
 import PhotoGallery from '../components/culture/PhotoGallery'
+import DeplacerCultureModal from '../components/culture/DeplacerCultureModal'
+import ModifierDateEmplacementModal from '../components/culture/ModifierDateEmplacementModal'
+import { addDaysISO, formatDateFr } from '../utils/cultureEmplacement'
 
 // ─── Statut badges ────────────────────────────────────────────────────────────
 const STATUT_CONFIG = {
@@ -341,6 +344,8 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [showDatesModal, setShowDatesModal] = useState(false)
+  const [showDeplacerModal, setShowDeplacerModal] = useState(false)
+  const [editEmplacement, setEditEmplacement] = useState<CultureEmplacement | null>(null)
   const qc = useQueryClient()
 
   const { data: culture, isLoading } = useQuery<CultureWithDetails>({
@@ -408,17 +413,36 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
       const dateFin   = culture.date_fin?.slice(0, 10)   || today
 
       // Chargement events + capteurs + photos en parallèle
-      const [events, logsRes, photos] = await Promise.all([
+      const stays = (culture.emplacements?.length
+        ? culture.emplacements
+        : culture.id_espace
+          ? [{ id_espace: culture.id_espace, date_debut: dateDebut, date_fin: null as string | null }]
+          : [])
+
+      const logFetches = stays.map(stay => {
+        const start = stay.date_debut > dateDebut ? stay.date_debut : dateDebut
+        let end = dateFin
+        if (stay.date_fin) {
+          const lastDay = addDaysISO(stay.date_fin, -1)
+          if (lastDay < start) return Promise.resolve({ data: [] as Awaited<ReturnType<typeof capteursAPI.getLogs>>['data'] })
+          end = lastDay < dateFin ? lastDay : dateFin
+        }
+        if (start > end) return Promise.resolve({ data: [] as Awaited<ReturnType<typeof capteursAPI.getLogs>>['data'] })
+        return capteursAPI.getLogs({
+          date_debut: `${start}T00:00:00`,
+          date_fin:   `${end}T23:59:59`,
+          id_espace: stay.id_espace,
+        })
+      })
+
+      const [events, logsParts, photos] = await Promise.all([
         getCalendrierExport(dateDebut, dateFin, culture.id_culture),
-        capteursAPI.getLogs({
-          date_debut: `${dateDebut}T00:00:00`,
-          date_fin:   `${dateFin}T23:59:59`,
-          ...(culture.id_espace ? { id_espace: culture.id_espace } : {}),
-        }),
+        Promise.all(logFetches),
         photosAPI.list({ id_culture: culture.id_culture }),
       ])
+      const logs = logsParts.flatMap(r => r.data)
 
-      generateCalendarPDF(events, dateDebut, dateFin, logsRes.data, {
+      generateCalendarPDF(events, dateDebut, dateFin, logs, {
         title:       `Journal — ${culture.nom}`,
         subtitle:    'Suivi de culture jour par jour',
         cultureName: culture.nom,
@@ -493,9 +517,32 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
               {statut.label}
             </span>
           </div>
-          {culture.nom_espace && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">📦 {culture.nom_espace}</p>
-          )}
+          <div className="mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              📦 Actuellement : {culture.nom_espace || 'Aucun espace'}
+            </p>
+            {(culture.emplacements?.length ?? 0) > 0 && (
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="font-medium text-gray-600 dark:text-gray-300">Historique</p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {[...(culture.emplacements ?? [])]
+                    .sort((a, b) => b.date_debut.localeCompare(a.date_debut) || b.id_emplacement - a.id_emplacement)
+                    .map(e => (
+                      <li key={e.id_emplacement} className="flex items-center gap-2">
+                        <span>• {formatDateFr(e.date_debut)} → {e.nom_espace || `Espace #${e.id_espace}`}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditEmplacement(e)}
+                          className="text-grow-600 hover:text-grow-800 hover:underline font-medium"
+                        >
+                          Modifier
+                        </button>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </div>
           {culture.but_culture && (
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {culture.but_culture.split(',').map(b => b.trim()).filter(Boolean).map(b => (
@@ -536,6 +583,14 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
             title="Éditer les dates clés de la culture"
           >
             <Calendar size={15} /> Dates
+          </button>
+
+          <button
+            onClick={() => setShowDeplacerModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40"
+            title="Déplacer la culture vers un autre espace"
+          >
+            <MapPin size={15} /> Changer d'espace
           </button>
 
           {/* Export PDF — toujours visible */}
@@ -721,7 +776,12 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
       {/* Tab content */}
       <div>
         {activeTab === 'calendrier' && (
-          <CalendrierCulture cultureId={cultureId} idEspace={culture.id_espace} plants={culture.plants} />
+          <CalendrierCulture
+            cultureId={cultureId}
+            idEspace={culture.id_espace}
+            emplacements={culture.emplacements}
+            plants={culture.plants}
+          />
         )}
         {activeTab === 'plantes' && (
           <PlantesTab cultureId={cultureId} plants={culture.plants} />
@@ -741,6 +801,19 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
           onClose={() => setShowDatesModal(false)}
           onSave={(data) => updateDates.mutate(data)}
           isPending={updateDates.isPending}
+        />
+      )}
+      {showDeplacerModal && (
+        <DeplacerCultureModal
+          culture={culture}
+          onClose={() => setShowDeplacerModal(false)}
+        />
+      )}
+      {editEmplacement && (
+        <ModifierDateEmplacementModal
+          culture={culture}
+          emplacement={editEmplacement}
+          onClose={() => setEditEmplacement(null)}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 // ─── Handlers locaux : EspaceCulture + EspaceMateriel ─────────────────────────
 // Miroir de backend/app/routers/espaces.py (export/import CSV → non portés, 501)
-import { route } from '../router'
+import { route, LocalHttpError } from '../router'
 import { query, one, oneOr404, insert, updateById, run } from '../helpers'
 
 type Row = Record<string, unknown>
@@ -96,6 +96,16 @@ route('PUT', '/espaces/:id', async ({ params, body }) => {
 
 route('DELETE', '/espaces/:id', async ({ params }) => {
   await oneOr404('SELECT * FROM "EspaceCulture" WHERE id_espace = ?', [params.id], 'Espace de culture introuvable')
+  const occupant = await one<Row>('SELECT nom FROM "Culture" WHERE id_espace = ?', [params.id])
+  if (occupant) {
+    throw new LocalHttpError(409,
+      `Impossible de supprimer cet espace : il est encore rattaché à la culture « ${occupant.nom} ».`)
+  }
+  const historique = await one<Row>('SELECT id_emplacement FROM "CultureEmplacement" WHERE id_espace = ?', [params.id])
+  if (historique) {
+    throw new LocalHttpError(409,
+      "Impossible de supprimer cet espace : il figure dans l'historique d'emplacement d'une culture.")
+  }
   await run('DELETE FROM "EspaceMateriel" WHERE id_espace = ?', [params.id])
   await run('DELETE FROM "EspaceCulture" WHERE id_espace = ?', [params.id])
   return { status: 204 }
