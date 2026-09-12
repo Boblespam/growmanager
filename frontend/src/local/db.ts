@@ -45,7 +45,21 @@ async function migrate(conn: SQLiteDBConnection): Promise<void> {
       // Premier lancement : création complète du schéma (78 tables)
       await conn.execute(SCHEMA_STATEMENTS.join('\n'), false)
     }
-    // Futures migrations : if (current < 2) { ... }
+    if (current < 2 && current > 0) {
+      await conn.execute('ALTER TABLE "GoveeDevice" ADD COLUMN source VARCHAR(20);', false)
+      await conn.execute(`CREATE TABLE IF NOT EXISTS "TapoConfig" (
+        id_config INTEGER NOT NULL,
+        enabled BOOLEAN NOT NULL,
+        hub_ip VARCHAR(50),
+        username VARCHAR(255),
+        password_encrypted TEXT,
+        last_status VARCHAR(50),
+        last_error TEXT,
+        last_poll_at DATETIME,
+        updated_at DATETIME,
+        PRIMARY KEY (id_config)
+      );`, false)
+    }
     await conn.execute(`PRAGMA user_version = ${SCHEMA_VERSION};`, false)
   }
   // Seeds (AppSettings + listes paramétrables) — idempotent, comme au démarrage du backend
