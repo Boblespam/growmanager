@@ -8,7 +8,8 @@ sources: [models/all_models.py, routers/capteurs.py]
 
 ## GoveeDevice
 
-A registered Govee smart sensor (model H5179 or similar).
+A registered environmental sensor. Existing Govee rows remain valid; Tapo and
+ESPHome rows reuse this registry.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -16,6 +17,7 @@ A registered Govee smart sensor (model H5179 or similar).
 | `nom` | String | Display name (e.g. "Tente 1") |
 | `device_id` | String | Govee device ID (from cloud API) |
 | `modele` | String (nullable) | Device model |
+| `source` | String (nullable) | `govee` \| `tapo` \| `esphome` (legacy `NULL` = Govee) |
 | `ip_lan` | String (nullable) | Local IP for LAN polling |
 | `id_espace` | FK → EspaceCulture (nullable) | Which space this sensor monitors |
 | `actif` | Boolean | Whether polling is active |
@@ -39,7 +41,7 @@ A single sensor reading (temperature + humidity + VPD).
 | `temperature` | Float | °C |
 | `humidite` | Float | % RH |
 | `vpd` | Float (nullable) | Calculated VPD (kPa) |
-| `source` | String | `govee` \| `manual` |
+| `source` | String | `govee` \| `tapo` \| `esphome` \| `manual` |
 
 `id_culture` was made nullable via startup migration (was NOT NULL originally).
 
@@ -53,6 +55,11 @@ The Govee poller (`start_poller(app)` in `main.py`) runs as a FastAPI background
 - Stores results in `TemperatureLog`
 - Can be manually triggered via `POST /api/govee/poll`
 - API key configured via `POST /api/govee/config` (stored in `GoveeConfig`)
+
+The Tapo poller runs on the same five-minute scheduler and talks locally to
+the configured H100. Each T310/T315 is represented by one `GoveeDevice` row
+with `source='tapo'`; its readings use `TemperatureLog` and the shared VPD
+calculation. Tapo credentials are stored encrypted in `TapoConfig`.
 
 ---
 

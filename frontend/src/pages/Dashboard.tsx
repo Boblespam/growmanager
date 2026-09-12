@@ -401,6 +401,11 @@ function vpdColor(vpd?: number): string {
   return 'text-red-500'
 }
 
+function sensorSource(device: GoveeDevice): 'govee' | 'tapo' | 'esphome' {
+  if (device.source) return device.source
+  return device.modele?.toLowerCase() === 'esphome' ? 'esphome' : 'govee'
+}
+
 function SensorMiniCard({
   device,
   onClick,
@@ -420,9 +425,15 @@ function SensorMiniCard({
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">{device.nom}</span>
-        {isRecent
-          ? <Wifi size={11} className="text-green-500 shrink-0" />
-          : <WifiOff size={11} className="text-gray-300 shrink-0" />}
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className={`text-[9px] uppercase font-semibold ${
+            sensorSource(device) === 'tapo' ? 'text-purple-600' :
+            sensorSource(device) === 'esphome' ? 'text-orange-500' : 'text-teal-600'
+          }`}>{sensorSource(device)}</span>
+          {isRecent
+            ? <Wifi size={11} className="text-green-500" />
+            : <WifiOff size={11} className="text-gray-300" />}
+        </span>
       </div>
       {device.derniere_temperature != null ? (
         <div className="flex gap-2 text-xs">

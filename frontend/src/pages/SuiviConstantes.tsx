@@ -53,6 +53,11 @@ function vpdZone(vpd?: number): string {
   return 'Trop sec'
 }
 
+function sensorSource(device: GoveeDevice): 'govee' | 'tapo' | 'esphome' {
+  if (device.source) return device.source
+  return device.modele?.toLowerCase() === 'esphome' ? 'esphome' : 'govee'
+}
+
 // ── Composant carte capteur live ──────────────────────────────────────────────
 
 function SensorCard({
@@ -80,10 +85,16 @@ function SensorCard({
     >
       <div className="flex items-center justify-between mb-2">
         <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">{device.nom}</span>
-        {isRecent
-          ? <Wifi size={14} className="text-green-500 shrink-0" />
-          : <WifiOff size={14} className="text-gray-300 shrink-0" />
-        }
+        <span className="flex items-center gap-1.5 shrink-0">
+          <span className={`text-[10px] uppercase font-semibold ${
+            sensorSource(device) === 'tapo' ? 'text-purple-600' :
+            sensorSource(device) === 'esphome' ? 'text-orange-500' : 'text-teal-600'
+          }`}>{sensorSource(device)}</span>
+          {isRecent
+            ? <Wifi size={14} className="text-green-500" />
+            : <WifiOff size={14} className="text-gray-300" />
+          }
+        </span>
       </div>
       {device.nom_espace && (
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">{device.nom_espace}</p>
@@ -547,7 +558,9 @@ export default function SuiviConstantes() {
   const handlePollNow = async () => {
     setPolling(true)
     try {
-      await capteursAPI.pollNow()
+      const requests = [capteursAPI.pollNow()]
+      if (devices.some(d => sensorSource(d) === 'tapo')) requests.push(capteursAPI.pollTapoNow())
+      await Promise.all(requests)
       await refetchDevices()
     } finally {
       setPolling(false)
@@ -566,11 +579,11 @@ export default function SuiviConstantes() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">🌡 Suivi des Constantes</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
-            Température · Humidité · VPD — Capteurs Govee H5179
+            Température · Humidité · VPD — Capteurs Govee, Tapo et ESPHome
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {activeDevice && (
+          {activeDevice && sensorSource(activeDevice) === 'govee' && (
             <button
               onClick={() => setShowImport(v => !v)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
@@ -595,7 +608,7 @@ export default function SuiviConstantes() {
       </div>
 
       {/* Panneau import CSV */}
-      {showImport && activeDevice && (
+      {showImport && activeDevice && sensorSource(activeDevice) === 'govee' && (
         <CsvImportPanel
           device={activeDevice}
           onClose={() => setShowImport(false)}
@@ -608,8 +621,8 @@ export default function SuiviConstantes() {
           <Wifi size={40} className="mx-auto text-gray-300 mb-3" />
           <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">Aucun capteur configuré</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Ajoutez vos capteurs Govee dans la page{' '}
-            <span className="text-teal-600 dark:text-teal-400 font-medium">Paramétrage → Capteurs Govee</span>
+            Ajoutez vos capteurs dans la page{' '}
+            <span className="text-teal-600 dark:text-teal-400 font-medium">Paramétrage → Capteurs</span>
           </p>
         </div>
       ) : (

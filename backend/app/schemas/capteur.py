@@ -1,6 +1,6 @@
 """Schemas Pydantic pour GoveeDevice (capteurs) et TemperatureLog"""
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 
@@ -10,6 +10,7 @@ class GoveeDeviceBase(BaseModel):
     nom:       str
     device_id: Optional[str] = None
     modele:    Optional[str] = None
+    source:    Optional[Literal["govee", "tapo", "esphome"]] = None
     ip_lan:    Optional[str] = None
     id_espace: Optional[int] = None
     actif:     bool          = True
@@ -40,6 +41,56 @@ class GoveeDeviceRead(GoveeDeviceBase):
     derniere_lecture:     Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ── Tapo H100 ────────────────────────────────────────────────────────────────
+
+class TapoConfigRead(BaseModel):
+    enabled:        bool = False
+    hub_ip:         Optional[str] = None
+    username:       Optional[str] = None
+    credentials_set: bool = False
+    last_status:    Optional[str] = None
+    last_error:     Optional[str] = None
+    last_poll_at:   Optional[datetime] = None
+
+
+class TapoConfigUpdate(BaseModel):
+    enabled:  Optional[bool] = None
+    hub_ip:   Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None  # None = ne pas modifier
+
+
+class TapoTestResult(BaseModel):
+    connected:   bool
+    message:     str
+    child_count: int = 0
+
+
+class TapoDiscoveryDevice(BaseModel):
+    device_id:           str
+    modele:              str
+    device_name:         str
+    temperature:         Optional[float] = None
+    humidite:            Optional[float] = None
+    already_registered:  bool = False
+
+
+class TapoDeviceCreate(BaseModel):
+    nom:       str
+    device_id: str
+    modele:    Literal["T310", "T315"]
+    id_espace: Optional[int] = None
+    actif:     bool = True
+    notes:     Optional[str] = None
+
+
+class TapoDeviceUpdate(BaseModel):
+    nom:       Optional[str] = None
+    id_espace: Optional[int] = None
+    actif:     Optional[bool] = None
+    notes:     Optional[str] = None
 
 
 # ── TemperatureLog ────────────────────────────────────────────────────────────
@@ -107,6 +158,7 @@ class GmailImportResult(BaseModel):
 class PollResult(BaseModel):
     device_id:    int
     nom:          str
+    source:       Optional[str] = None
     success:      bool
     temperature:  Optional[float] = None
     humidite:     Optional[float] = None
