@@ -45,7 +45,25 @@ async function migrate(conn: SQLiteDBConnection): Promise<void> {
       // Premier lancement : création complète du schéma (78 tables)
       await conn.execute(SCHEMA_STATEMENTS.join('\n'), false)
     }
-    // Futures migrations : if (current < 2) { ... }
+    if (current < 3 && current > 0) {
+      await conn.execute(`CREATE TABLE IF NOT EXISTS "CultureEmplacement" (
+        id_emplacement INTEGER NOT NULL,
+        id_culture INTEGER NOT NULL,
+        id_espace INTEGER NOT NULL,
+        date_debut DATE NOT NULL,
+        date_fin DATE,
+        PRIMARY KEY (id_emplacement),
+        FOREIGN KEY(id_culture) REFERENCES "Culture" (id_culture) ON DELETE CASCADE,
+        FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
+      );`, false)
+      await conn.execute(`INSERT INTO "CultureEmplacement" (id_culture, id_espace, date_debut, date_fin)
+        SELECT c.id_culture, c.id_espace, COALESCE(c.date_debut, date('now')), NULL
+        FROM "Culture" c
+        WHERE c.id_espace IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM "CultureEmplacement" e WHERE e.id_culture = c.id_culture
+          );`, false)
+    }
     await conn.execute(`PRAGMA user_version = ${SCHEMA_VERSION};`, false)
   }
   // Seeds (AppSettings + listes paramétrables) — idempotent, comme au démarrage du backend

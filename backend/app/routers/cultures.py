@@ -9,13 +9,17 @@ from sqlalchemy import extract, or_, func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Culture, Plant, ActionCalendrier, EspaceCulture, Graine, ProduitEngrais, Stock, Box
+from app.models import Culture, CultureEmplacement, Plant, ActionCalendrier, EspaceCulture, Graine, ProduitEngrais, Stock, Box
 from app.models.all_models import RecetteEngrais, RecetteTCO, HistoriqueCulture, HistoriquePlant, RecetteLSO, CultureLampe, Lampe, AppSettings, EspaceMateriel, Materiel
 from app.schemas.culture import (
     CultureCreate, CultureUpdate, CultureRead, CultureWithDetails,
     PlantCreate, PlantUpdate, PlantRead,
     ActionCreate, ActionRead,
-    PlantTransferPayload,
+    PlantTransferPayload, CultureDeplacerPayload, CultureEmplacementDatePayload,
+)
+from app.routers.culture_helpers import (
+    ensure_initial_emplacement, list_emplacements, deplacer_culture, espace_id_at,
+    corriger_date_emplacement,
 )
 
 logger = logging.getLogger(__name__)
@@ -239,6 +243,7 @@ def _enrich_culture(culture: Culture, db: Session) -> dict:
         "jours_depuis_dernier_arrosage": jours_depuis_arrosage,
         "jours_depuis_dernier_tco": jours_depuis_tco,
         "total_recolte_g": sum(float(p.poids_recolte_g) for p in plants if p.poids_recolte_g) or None,
+        "emplacements": list_emplacements(db, culture.id_culture),
     }
 
 
@@ -1389,6 +1394,9 @@ def list_cultures(
     else:
         q = q.filter(Culture.statut.in_(["active", "sechage_curing"]))
     cultures = q.order_by(Culture.date_debut.desc()).all()
+    for c in cultures:
+        ensure_initial_emplacement(db, c)
+    db.commit()
     return [_enrich_culture(c, db) for c in cultures]
 
 
@@ -1727,6 +1735,8 @@ def get_culture(culture_id: int, db: Session = Depends(get_db)):
     culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
     if not culture:
         raise HTTPException(status_code=404, detail="Culture non trouvée")
+    ensure_initial_emplacement(db, culture)
+    db.commit()
     data = _enrich_culture(culture, db)
     plants = db.query(Plant).filter(Plant.id_culture == culture_id).order_by(Plant.numero_plant).all()
     data["plants"] = [_enrich_plant(p, db) for p in plants]
@@ -1816,6 +1826,7 @@ def create_culture(payload: CultureCreate, db: Session = Depends(get_db)):
         )
         db.add(culture)
         db.flush()
+        ensure_initial_emplacement(db, culture)
 
         plant_counter = 1
 
@@ -1899,12 +1910,15 @@ def update_culture(culture_id: int, payload: CultureUpdate, db: Session = Depend
     culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
     if not culture:
         raise HTTPException(status_code=404, detail="Culture non trouvée")
-    for f in ["nom", "id_espace", "date_debut", "statut", "date_fin", "date_recolte_estimee",
+    new_espace = payload.id_espace
+    for f in ["nom", "date_debut", "statut", "date_fin", "date_recolte_estimee",
               "date_passage_12_12", "date_debut_floraison", "phase",
               "type_culture", "type_eclairage", "but_culture", "notes"]:
         v = getattr(payload, f)
         if v is not None:
             setattr(culture, f, v)
+    if new_espace is not None and new_espace != culture.id_espace:
+        deplacer_culture(db, culture, new_espace, date.today())
     if payload.date_passage_12_12:
         _compute_harvest_date(culture, db)
     db.commit()
@@ -1928,6 +1942,7 @@ def delete_culture(culture_id: int, db: Session = Depends(get_db)):
     # Cascade manuelle : actions → plantes → culture
     db.query(ActionCalendrier).filter(ActionCalendrier.id_culture == culture_id).delete(synchronize_session=False)
     db.query(Plant).filter(Plant.id_culture == culture_id).delete(synchronize_session=False)
+    db.query(CultureEmplacement).filter(CultureEmplacement.id_culture == culture_id).delete(synchronize_session=False)
     db.delete(culture)
     db.commit()
 
@@ -1953,6 +1968,67 @@ def close_culture(culture_id: int, db: Session = Depends(get_db)):
         culture.statut = "terminee"
         if not culture.date_fin:
             culture.date_fin = date.today()
+    db.commit()
+    db.refresh(culture)
+    return _enrich_culture(culture, db)
+
+
+@router.get("/{culture_id}/emplacements")
+def get_culture_emplacements(culture_id: int, db: Session = Depends(get_db)):
+    culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
+    if not culture:
+        raise HTTPException(status_code=404, detail="Culture non trouvée")
+    ensure_initial_emplacement(db, culture)
+    db.commit()
+    return list_emplacements(db, culture_id)
+
+
+@router.get("/{culture_id}/espace-at")
+def get_culture_espace_at(
+    culture_id: int,
+    date: date = Query(..., description="Date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+):
+    culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
+    if not culture:
+        raise HTTPException(status_code=404, detail="Culture non trouvée")
+    ensure_initial_emplacement(db, culture)
+    db.commit()
+    rows = db.query(CultureEmplacement).filter(CultureEmplacement.id_culture == culture_id).all()
+    id_espace = espace_id_at(rows, date, culture.id_espace)
+    nom_espace = None
+    if id_espace:
+        esp = db.query(EspaceCulture).filter(EspaceCulture.id_espace == id_espace).first()
+        nom_espace = esp.nom if esp else None
+    return {"id_espace": id_espace, "nom_espace": nom_espace, "date": date}
+
+
+@router.post("/{culture_id}/deplacer", response_model=CultureRead)
+def deplacer_culture_endpoint(
+    culture_id: int,
+    payload: CultureDeplacerPayload,
+    db: Session = Depends(get_db),
+):
+    culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
+    if not culture:
+        raise HTTPException(status_code=404, detail="Culture non trouvée")
+    deplacer_culture(db, culture, payload.id_espace, payload.date_deplacement)
+    db.commit()
+    db.refresh(culture)
+    return _enrich_culture(culture, db)
+
+
+@router.put("/{culture_id}/emplacements/{emplacement_id}", response_model=CultureRead)
+def corriger_date_emplacement_endpoint(
+    culture_id: int,
+    emplacement_id: int,
+    payload: CultureEmplacementDatePayload,
+    db: Session = Depends(get_db),
+):
+    culture = db.query(Culture).filter(Culture.id_culture == culture_id).first()
+    if not culture:
+        raise HTTPException(status_code=404, detail="Culture non trouvée")
+    corriger_date_emplacement(db, culture, emplacement_id, payload.date_debut)
     db.commit()
     db.refresh(culture)
     return _enrich_culture(culture, db)
@@ -2088,6 +2164,7 @@ def transfer_plant(
         )
         db.add(new_culture)
         db.flush()  # pour récupérer l'id
+        ensure_initial_emplacement(db, new_culture)
         target_culture_id = new_culture.id_culture
 
     # Déplacer la plante
@@ -2159,6 +2236,7 @@ def clone_plant(
             )
             db.add(culture_cible)
             db.flush()
+            ensure_initial_emplacement(db, culture_cible)
     elif id_box:
         culture_cible = (
             db.query(Culture)
