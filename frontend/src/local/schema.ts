@@ -1,7 +1,7 @@
 // ─── GÉNÉRÉ depuis backend/app/models/all_models.py (SQLAlchemy → dialecte SQLite) ───
 // Ne pas éditer à la main : régénérer si le schéma backend change (voir wiki features/mobile-standalone).
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 3
 
 export const SCHEMA_STATEMENTS: string[] = [
 `CREATE TABLE "AppSettings" (
@@ -548,6 +548,16 @@ export const SCHEMA_STATEMENTS: string[] = [
 	notes TEXT, 
 	PRIMARY KEY (id_culture), 
 	FOREIGN KEY(id_box) REFERENCES "Box" (id_box), 
+	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
+)`,
+`CREATE TABLE "CultureEmplacement" (
+	id_emplacement INTEGER NOT NULL,
+	id_culture INTEGER NOT NULL,
+	id_espace INTEGER NOT NULL,
+	date_debut DATE NOT NULL,
+	date_fin DATE,
+	PRIMARY KEY (id_emplacement),
+	FOREIGN KEY(id_culture) REFERENCES "Culture" (id_culture) ON DELETE CASCADE,
 	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
 )`,
 `CREATE TABLE "EspaceMateriel" (
