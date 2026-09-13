@@ -12,7 +12,7 @@ import { breederAPI } from '../api/breeders'
 import type { Breeder } from '../api/breeders'
 import { varieteAPI } from '../api/varietes'
 import type { Variete } from '../api/varietes'
-import { capteursAPI, GoveeDevice, GoveeDeviceCreate, GoveeConfig, GmailImportResult, PollResult, GoveeCloudDevice } from '../api/capteurs'
+import { capteursAPI, GoveeDevice, GoveeDeviceCreate, GoveeConfig, GmailImportResult, PollResult, GoveeCloudDevice, TapoConfig, TapoDiscoveryDevice } from '../api/capteurs'
 import { stockAlertSeuilsAPI, StockAlertSeuil, SeuilUpsert } from '../api/stockAlertSeuils'
 
 // ── Définition de toutes les listes et leur groupement ────────────────────────
@@ -807,6 +807,16 @@ function CapteursTabs() {
       </CapteurAccordion>
 
       <CapteurAccordion
+        id="tapo"
+        title="Capteurs Tapo"
+        subtitle="T310/T315 via hub H100 — réseau local uniquement"
+        color="purple"
+        icon={<Thermometer size={18} />}
+      >
+        <TapoSectionContent />
+      </CapteurAccordion>
+
+      <CapteurAccordion
         id="esphome"
         title="Capteurs ESPHome"
         subtitle="Capteurs DIY via ESPHome — poussent leurs données vers GrowManager"
@@ -815,6 +825,284 @@ function CapteursTabs() {
       >
         <ESPHomeSectionContent />
       </CapteurAccordion>
+    </div>
+  )
+}
+
+// ── Section Tapo H100 ─────────────────────────────────────────────────────────
+
+function TapoSectionContent() {
+  const qc = useQueryClient()
+  const { data: config, refetch: refetchConfig } = useQuery<TapoConfig>({
+    queryKey: ['tapo-config'],
+    queryFn: async () => (await capteursAPI.getTapoConfig()).data,
+  })
+  const { data: devices = [], refetch: refetchDevices } = useQuery<GoveeDevice[]>({
+    queryKey: ['tapo-devices'],
+    queryFn: async () => (await capteursAPI.getTapoDevices()).data,
+  })
+  const { data: espaces = [] } = useQuery<any[]>({
+    queryKey: ['espaces'],
+    queryFn: async () => (await apiClient.get<any[]>('/espaces/')).data,
+  })
+
+  const [hubIp, setHubIp] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [enabled, setEnabled] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [discovering, setDiscovering] = useState(false)
+  const [discovery, setDiscovery] = useState<TapoDiscoveryDevice[]>([])
+  const [selected, setSelected] = useState<TapoDiscoveryDevice | null>(null)
+  const [newName, setNewName] = useState('')
+  const [newSpace, setNewSpace] = useState<number | undefined>(undefined)
+  const [savingDevice, setSavingDevice] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!config) return
+    setHubIp(config.hub_ip ?? '')
+    setUsername(config.username ?? '')
+    setEnabled(config.enabled)
+  }, [config])
+
+  const saveConfig = async () => {
+    setSaving(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await capteursAPI.updateTapoConfig({
+        enabled,
+        hub_ip: hubIp.trim() || undefined,
+        username: username.trim() || undefined,
+        ...(password ? { password } : {}),
+      })
+      setPassword('')
+      await refetchConfig()
+      setMessage('Configuration Tapo enregistrée')
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? 'Impossible d’enregistrer la configuration Tapo')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const testConnection = async () => {
+    setTesting(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const result = (await capteursAPI.testTapoConnection()).data
+      if (result.connected) setMessage(result.message)
+      else setError(result.message)
+      await refetchConfig()
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? 'Test de connexion Tapo impossible')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const discover = async () => {
+    setDiscovering(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const result = (await capteursAPI.discoverTapoDevices()).data
+      setDiscovery(result)
+      if (result.length === 0) setMessage('Aucun T310/T315 trouvé sur ce H100')
+    } catch (err: any) {
+      setDiscovery([])
+      setError(err?.response?.data?.detail ?? 'Découverte Tapo impossible')
+    } finally {
+      setDiscovering(false)
+    }
+  }
+
+  const selectForRegistration = (child: TapoDiscoveryDevice) => {
+    setSelected(child)
+    setNewName(child.device_name)
+    setNewSpace(undefined)
+  }
+
+  const registerDevice = async () => {
+    if (!selected || !newName.trim()) return
+    setSavingDevice(true)
+    setError(null)
+    try {
+      await capteursAPI.createTapoDevice({
+        nom: newName.trim(),
+        device_id: selected.device_id,
+        modele: selected.modele,
+        id_espace: newSpace,
+        actif: true,
+      })
+      setSelected(null)
+      await refetchDevices()
+      await qc.invalidateQueries({ queryKey: ['capteurs'] })
+      setDiscovery(prev => prev.map(x =>
+        x.device_id === selected.device_id ? { ...x, already_registered: true } : x
+      ))
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? 'Impossible d’enregistrer ce capteur Tapo')
+    } finally {
+      setSavingDevice(false)
+    }
+  }
+
+  const pollNow = async () => {
+    setTesting(true)
+    setMessage(null)
+    setError(null)
+    try {
+      const result = (await capteursAPI.pollTapoNow()).data
+      const failed = result.filter(x => !x.success)
+      if (failed.length) setError(failed.map(x => `${x.nom}: ${x.erreur}`).join(' · '))
+      else setMessage(result.length ? 'Lecture Tapo terminée' : 'Aucun capteur Tapo actif')
+      await refetchDevices()
+      await qc.invalidateQueries({ queryKey: ['capteurs'] })
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? 'Lecture Tapo impossible')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const toggleDevice = async (device: GoveeDevice) => {
+    await capteursAPI.updateTapoDevice(device.id_device, { actif: !device.actif })
+    await refetchDevices()
+    await qc.invalidateQueries({ queryKey: ['capteurs'] })
+  }
+
+  const deleteDevice = async (id: number) => {
+    if (!confirm('Supprimer ce capteur Tapo et son historique ?')) return
+    await capteursAPI.deleteTapoDevice(id)
+    await refetchDevices()
+    await qc.invalidateQueries({ queryKey: ['capteurs'] })
+  }
+
+  return (
+    <div className="p-6 space-y-5">
+      <div className="text-xs text-gray-500 dark:text-gray-400 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 rounded-lg p-3 space-y-1">
+        <p className="font-medium text-purple-700 dark:text-purple-300">Accès local H100</p>
+        <p>GrowManager interroge directement l’adresse IP du H100. Les T310/T315 communiquent avec lui par radio ; aucune IP n’est nécessaire pour les sondes.</p>
+        <p>Le mot de passe est chiffré côté backend et n’est jamais renvoyé à cette page.</p>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Configuration du H100</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Adresse IP du H100 *</label>
+            <input value={hubIp} onChange={e => setHubIp(e.target.value)} placeholder="192.168.1.100"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Identifiant TP-Link / Tapo *</label>
+            <input value={username} onChange={e => setUsername(e.target.value)} placeholder="email@example.com"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">
+              Mot de passe {config?.credentials_set ? '(laisser vide pour conserver)' : '*'}
+            </label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 self-end pb-2">
+            <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+            Activer le polling automatique (toutes les 5 minutes)
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={saveConfig} disabled={saving}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs hover:bg-purple-700 disabled:opacity-50">
+            <Save size={12} /> {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+          </button>
+          <button onClick={testConnection} disabled={testing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 dark:text-gray-200 rounded-lg text-xs hover:bg-gray-200 disabled:opacity-50">
+            <Wifi size={12} /> {testing ? 'Test…' : 'Tester la connexion'}
+          </button>
+          <button onClick={discover} disabled={discovering}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 disabled:opacity-50">
+            <RefreshCw size={12} className={discovering ? 'animate-spin' : ''} /> Découvrir les T310/T315
+          </button>
+          <button onClick={pollNow} disabled={testing || devices.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs hover:bg-teal-700 disabled:opacity-50">
+            <Thermometer size={12} /> Lire maintenant
+          </button>
+        </div>
+        {config?.last_status && (
+          <p className={`text-xs ${config.last_status === 'online' ? 'text-green-600' : 'text-red-500'}`}>
+            État H100 : {config.last_status}{config.last_error ? ` — ${config.last_error}` : ''}
+          </p>
+        )}
+        {message && <p className="text-xs text-green-600 dark:text-green-400">{message}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+
+      {discovery.length > 0 && (
+        <div className="border border-blue-200 bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 space-y-2">
+          <h3 className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">T310/T315 découverts</h3>
+          {discovery.map(child => (
+            <div key={child.device_id} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{child.device_name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{child.modele} · {child.device_id}</p>
+              </div>
+              <span className="text-xs text-gray-500">{child.temperature != null ? `${child.temperature.toFixed(1)}°C · ${child.humidite?.toFixed(0)}%` : 'Sans mesure'}</span>
+              {child.already_registered ? (
+                <span className="text-xs text-green-600 font-medium">Enregistré</span>
+              ) : (
+                <button onClick={() => selectForRegistration(child)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Sélectionner</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selected && (
+        <div className="border border-purple-200 bg-purple-50 dark:bg-purple-900/10 rounded-xl p-4 space-y-3">
+          <h3 className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Enregistrer {selected.modele}</h3>
+          <p className="text-xs text-gray-500">{selected.device_id}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nom GrowManager"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm" />
+            <select value={newSpace ?? ''} onChange={e => setNewSpace(e.target.value ? Number(e.target.value) : undefined)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm">
+              <option value="">— Aucun espace —</option>
+              {espaces.map((e: any) => <option key={e.id_espace} value={e.id_espace}>{e.nom}</option>)}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setSelected(null)} className="px-3 py-1.5 text-xs text-gray-600 bg-white dark:bg-gray-800 border rounded-lg">Annuler</button>
+            <button onClick={registerDevice} disabled={savingDevice || !newName.trim()} className="px-3 py-1.5 text-xs text-white bg-purple-600 rounded-lg disabled:opacity-50">
+              {savingDevice ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Capteurs Tapo enregistrés ({devices.length})</h3>
+        {devices.length === 0 ? <p className="text-sm text-gray-400 text-center py-3">Aucun capteur Tapo enregistré</p> : devices.map(device => (
+          <div key={device.id_device} className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{device.nom}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{device.modele} · {device.device_id}</p>
+              {device.nom_espace && <p className="text-xs text-purple-600">{device.nom_espace}</p>}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 text-right">
+              {device.derniere_temperature != null ? `${device.derniere_temperature.toFixed(1)}°C · ${device.derniere_humidite?.toFixed(0)}%` : 'Aucune donnée'}
+              {device.derniere_lecture && <div className="text-gray-400">{new Date(device.derniere_lecture).toLocaleString('fr-FR')}</div>}
+            </div>
+            <button onClick={() => toggleDevice(device)} className={`p-1.5 rounded-lg ${device.actif ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`} title={device.actif ? 'Désactiver' : 'Activer'}><Wifi size={14} /></button>
+            <button onClick={() => deleteDevice(device.id_device)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1101,10 +1389,13 @@ function GoveeSectionContent() {
   }
 
   // Capteurs
-  const { data: devices = [], refetch: refetchDevices } = useQuery<GoveeDevice[]>({
+  const { data: allDevices = [], refetch: refetchDevices } = useQuery<GoveeDevice[]>({
     queryKey: ['capteurs'],
     queryFn: async () => (await capteursAPI.getAll()).data,
   })
+  const devices = allDevices.filter(d =>
+    d.source === 'govee' || (!d.source && d.modele?.toLowerCase() !== 'esphome')
+  )
   const { data: espaces = [] } = useQuery<any[]>({
     queryKey: ['espaces'],
     queryFn: async () => {

@@ -18,6 +18,7 @@ from typing import Optional, List
 
 import httpx
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.database import SessionLocal
 from app.models.all_models import GoveeDevice, TemperatureLog, Culture
@@ -226,6 +227,7 @@ def poll_all_devices():
     try:
         devices = db.query(GoveeDevice).filter(
             GoveeDevice.actif  == True,
+            or_(GoveeDevice.source.is_(None), GoveeDevice.source == "govee"),
             GoveeDevice.modele != "esphome",
         ).all()
         if not devices:
@@ -277,6 +279,20 @@ def poll_all_devices():
         db.close()
 
 
+def poll_tapo_devices_background():
+    """Point d'entrée APScheduler Tapo avec une session indépendante."""
+    from app.services.tapo_service import poll_tapo_devices
+
+    db: Session = SessionLocal()
+    try:
+        poll_tapo_devices(db)
+    except Exception as exc:
+        logger.error(f"poll_tapo_devices error: {exc}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 # ── APScheduler ───────────────────────────────────────────────────────────────
 
 def start_poller(app):
@@ -303,7 +319,16 @@ def start_poller(app):
             replace_existing=True,
         )
 
-        # ── Job 2 : import automatique Gmail quotidien à 00h30 ────────────────
+        # ── Job 2 : polling local Tapo toutes les 5 min ──────────────────────
+        scheduler.add_job(
+            poll_tapo_devices_background,
+            trigger="interval",
+            minutes=5,
+            id="tapo_poll",
+            replace_existing=True,
+        )
+
+        # ── Job 3 : import automatique Gmail quotidien à 00h30 ───────────────
         # 30 min après l'export Govee de 23h59 pour laisser le temps à l'email d'arriver.
         def _gmail_job():
             from app.services.gmail_importer import check_gmail_and_import
@@ -323,6 +348,6 @@ def start_poller(app):
         def _shutdown():
             scheduler.shutdown(wait=False)
 
-        logger.info("Govee poller démarré (5 min) + Gmail import quotidien (00h30).")
+        logger.info("Pollers Govee/Tapo démarrés (5 min) + Gmail import quotidien (00h30).")
     except ImportError:
         logger.warning("APScheduler absent — polling automatique désactivé.")

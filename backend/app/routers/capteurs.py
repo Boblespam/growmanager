@@ -14,7 +14,7 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.database import get_db
 from app.models.all_models import GoveeDevice, TemperatureLog, EspaceCulture, Culture, ParametreListeValeur
@@ -62,6 +62,7 @@ def _enrich_device(d: GoveeDevice, db: Session) -> GoveeDeviceRead:
         nom=         d.nom,
         device_id=   d.device_id,
         modele=      d.modele,
+        source=      d.source or ("esphome" if d.modele == "esphome" else "govee"),
         ip_lan=      d.ip_lan,
         id_espace=   d.id_espace,
         actif=       d.actif,
@@ -95,7 +96,11 @@ def get_capteur(device_id: int, db: Session = Depends(get_db)):
 
 @router.post("/api/capteurs", response_model=GoveeDeviceRead, status_code=201)
 def create_capteur(payload: GoveeDeviceCreate, db: Session = Depends(get_db)):
-    d = GoveeDevice(**payload.model_dump())
+    values = payload.model_dump()
+    values["source"] = payload.source or (
+        "esphome" if payload.modele == "esphome" else "govee"
+    )
+    d = GoveeDevice(**values)
     db.add(d); db.commit(); db.refresh(d)
     return _enrich_device(d, db)
 
@@ -384,6 +389,7 @@ def manual_poll(db: Session = Depends(get_db)):
     """Déclenche immédiatement un cycle de polling sur tous les capteurs actifs (API V2)."""
     devices = db.query(GoveeDevice).filter(
         GoveeDevice.actif  == True,
+        or_(GoveeDevice.source.is_(None), GoveeDevice.source == "govee"),
         GoveeDevice.modele != "esphome",
     ).all()
     api_key     = _get_cloud_api_key(db)
