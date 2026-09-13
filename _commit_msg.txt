@@ -1,10 +1,7 @@
-chore: retire growmanager_dump.sql du suivi git
+chore(wiki): documente l'intégration Tapo H100 (PR #5) et le bug de migration race condition
 
-Le dump SQL (4.5 Mo, donnees personnelles de culture) avait ete commite
-par erreur (le rm --cached + gitignore precedent n'avait pas ete
-correctement stage avant le commit --amend). Retire du suivi et
-ajoute a .gitignore (*.sql, avec exception pour backend/init.sql et
-les scripts de migration versionnes) pour que ca ne se reproduise pas.
-
-Fichier conserve localement (untracked) sur le PC Windows et sur le
-serveur de prod, juste retire de git.
+- wiki/roadmap.md : section Tapo H100 marquée ✅ (mergé + déployé 2026-09-13)
+- wiki/log.md : entrée détaillant la revue PR #5, le conflit de SCHEMA_VERSION avec PR #6, l'incident de résolution GitHub et le déploiement
+- wiki/bugs/tapoconfig-migration-race.md : nouveau — race condition multi-workers sur create_all() découverte au déploiement
+- wiki/architecture/patterns.md : note sur le piège multi-workers ajoutée section 1
+- CHANGELOG.md : entrée Ajouté sous [Unreleased] pour l'intégration Tapo

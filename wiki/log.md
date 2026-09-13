@@ -6,6 +6,26 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-09-13] Feature | Intégration Tapo H100 — PR externe #5 mergée + déployée en prod
+
+**Contexte :** PR #5 (`Devilouned/feat/tapo-h100-local`) — intégration de capteurs Tapo T310/T315 via hub H100 local, en parallèle de la PR #6 (historique des emplacements de culture, déjà mergée le 2026-09-12).
+
+**Revue :** les 3 points de correction demandés (modèle `TapoConfig` + export, migration `GoveeDevice.source` idempotente, enregistrement du routeur) confirmés directement dans le code, ainsi que les 7 tests unitaires (`backend/test_tapo_service.py`).
+
+**Conflit détecté avant merge :** PR #5 et PR #6 ont chacune bumpé `SCHEMA_VERSION` (schéma SQLite local du mode mobile standalone) en partant du même point (`1` → `2`), sans le savoir l'une de l'autre. PR #6 mergée en premier (bump réel vers `3`), créant un conflit direct sur `frontend/src/local/db.ts` et `schema.ts` avec PR #5. Résolu via l'éditeur de conflits GitHub : migration Tapo renumérotée en version `4`, les deux blocs de migration (`CultureEmplacement` v3, Tapo v4) conservés côte à côte.
+
+**Incident lors de la résolution :** le bouton "Accept both changes" de l'éditeur GitHub a concaténé les deux blocs sans réinsérer l'accolade fermante commune aux deux côtés du conflit, cassant la syntaxe de `db.ts` (vérifié par comptage d'accolades). Corrigé par une seconde édition directe du fichier sur la branche de la PR avant le merge définitif.
+
+**Déployé en prod** le 2026-09-13 via `./update.sh latest`, sans incident sur les données.
+
+**Bug découvert au déploiement :** race condition entre les 2 workers Uvicorn du backend sur la création de la table `TapoConfig` (plantage bref d'un worker, auto-résolu, aucune perte de données). Détail complet et pistes de correction : [[bugs/tapoconfig-migration-race]].
+
+**Fichiers modifiés :** `wiki/roadmap.md` (section Tapo H100), `wiki/bugs/tapoconfig-migration-race.md` (nouveau), `wiki/architecture/patterns.md` (note section 1), `CHANGELOG.md` (section Ajouté).
+
+Validé 2026-09-13.
+
+---
+
 ## [2026-09-12] Incident prod | Panne auth MySQL après `update.sh` — `.env.production` jamais lu
 
 **Symptôme :** dashboard en échec de chargement juste après un `./update.sh latest` pourtant réussi côté script. Logs backend : `Access denied for user 'grow'@'172.18.0.2'`.

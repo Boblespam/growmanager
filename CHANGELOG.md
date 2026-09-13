@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.4.10] - 2026-09-13
+
+### Ajouté
+- Intégration capteurs Tapo T310/T315 via hub H100 local (configuration, découverte, polling automatique 5 min, historique VPD partagé avec Govee/ESPHome). PR externe #5.
+
+---
+
 ## [3.4.9] - 2026-09-12
 
 *(prochaines modifications en cours)*
