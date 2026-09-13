@@ -1,7 +1,7 @@
 // ─── GÉNÉRÉ depuis backend/app/models/all_models.py (SQLAlchemy → dialecte SQLite) ───
 // Ne pas éditer à la main : régénérer si le schéma backend change (voir wiki features/mobile-standalone).
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 4
 
 export const SCHEMA_STATEMENTS: string[] = [
 `CREATE TABLE "AppSettings" (
