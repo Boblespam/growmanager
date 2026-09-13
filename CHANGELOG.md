@@ -17,6 +17,37 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.4.9] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.8] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.7] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.6] - 2026-09-12
+
+### Corrigé
+- CI : le workflow `docker-publish.yml` ne publiait jamais le tag `:latest` sur GHCR (seulement `main` et `sha-xxxxx`), ce qui faisait échouer `update.sh latest` en prod (`manifest unknown`). Ajout de `flavor: latest=true` sur les jobs backend et frontend.
+
+---
+
+## [3.4.5] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
 ## [3.4.4] - 2026-07-16
 
 *(prochaines modifications en cours)*

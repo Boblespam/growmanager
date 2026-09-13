@@ -48,19 +48,24 @@ docker exec -it growmanager-db-1 mysql -u root -p growmanager
 
 ### Production (Linux)
 
-Premier déploiement :
+Serveur dédié (PC atelier, Ubuntu 24.04.5 LTS) à `192.168.1.156` (IP réservée en DHCP sur la box), accès `ssh clapie` (alias SSH configuré sur le poste Windows). Dépôt cloné dans `~/growmanager`. Détails serveur complets (specs, ports, services colocalisés, pièges rencontrés) : [[architecture/infrastructure-prod]].
+
+Déploiement **pull-based** depuis les images pré-buildées sur GHCR (`docker-compose.prod.yml`) — pas de build sur le serveur :
+
 ```bash
-git clone <repo>
-cp .env.example .env   # puis éditer les mots de passe
-docker compose -f docker-compose.server.yml up -d --build
+./update.sh latest   # ou ./update.sh vX.Y.Z pour figer une version précise
 ```
 
-Mises à jour suivantes (après un push depuis Windows) :
-```bash
-./update.sh
-```
+> `update.sh` fait : `docker compose -f docker-compose.prod.yml pull` (images `backend`+`frontend`) puis `up -d --no-deps backend frontend`. La base de données n'est jamais redémarrée.
 
-> `update.sh` fait : `git pull` + `docker compose -f docker-compose.server.yml up -d --build` + vérification des conteneurs.
+> ⚠️ `update.sh` ne passe pas `--env-file .env.production` — Compose ne charge que `.env`. Un lien symbolique `.env → .env.production` doit exister à la racine du repo sur le serveur, sinon le backend recréé retombe sur des identifiants MySQL par défaut et casse l'authentification (voir [[architecture/infrastructure-prod]] section 6, incident du 2026-09-12).
+
+**Workflow complet de mise à jour prod :**
+1. Sur le PC Windows : double-clic sur `push.bat` (commit + bump de version auto + push vers `main`)
+2. Attendre la fin du workflow GitHub Actions "Build & Publish Docker images" — publie `ghcr.io/mdf73/growmanager-{backend,frontend}` avec les tags `latest`, `main`, `sha-xxxxx` (et les tags semver sur un tag Git `vX.Y.Z`)
+3. `ssh clapie` puis `cd growmanager && ./update.sh latest`
+
+> `docker-compose.server.yml` (build depuis les sources, utilisé pour un tout premier déploiement sans registre) reste dispo mais n'est plus le flux courant depuis le passage sur ce serveur dédié.
 
 ## Key File Paths
 
@@ -120,6 +125,7 @@ Migrations: no Alembic — startup `run_migrations()` in `main.py` runs `ALTER T
 
 - [[architecture/stack]] — detailed architecture breakdown
 - [[architecture/patterns]] — key development patterns
+- [[architecture/infrastructure-prod]] — serveur de production : specs, ports, services colocalisés, pièges rencontrés
 - [[database/database-overview]] — all DB tables
 - [[frontend/frontend-overview]] — page routing and component structure
 - [[roadmap]] — pending features and TODOs

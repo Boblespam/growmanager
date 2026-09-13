@@ -1,9 +1,10 @@
-fix(stock): texte lisible sur carte de type sélectionnée en dark mode
+chore: retire growmanager_dump.sql du suivi git
 
-En mode nuit, les cartes de filtre par type (Fleur/Hash/Rosin...) sélectionnées
-passaient sur fond clair mais gardaient le texte blanc (variantes dark:) → illisible.
-Le poids et le compteur "x actifs" passent en texte foncé quand la carte est
-sélectionnée, sur les grilles Stock et Extractions.
+Le dump SQL (4.5 Mo, donnees personnelles de culture) avait ete commite
+par erreur (le rm --cached + gitignore precedent n'avait pas ete
+correctement stage avant le commit --amend). Retire du suivi et
+ajoute a .gitignore (*.sql, avec exception pour backend/init.sql et
+les scripts de migration versionnes) pour que ca ne se reproduise pas.
 
-- frontend/src/pages/Stock.tsx : classes texte conditionnelles selon sélection
-- wiki/log.md : entrée du fix
+Fichier conserve localement (untracked) sur le PC Windows et sur le
+serveur de prod, juste retire de git.

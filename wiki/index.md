@@ -1,5 +1,5 @@
 ---
-updated: 2026-04-09
+updated: 2026-09-12
 ---
 
 # Wiki Index
@@ -26,7 +26,8 @@ Content catalog for the GrowManager development wiki. Read this first when start
 
 - [[architecture/stack]] — Tech stack details, Docker services, startup sequence, pre-seeded data
 - [[architecture/patterns]] — Key dev patterns: migrations, enrichment, static-before-dynamic routes, M2M tables, JSON columns, pot formula
-- [[architecture/decisions]] — Architecture Decision Records (ADR-001 through ADR-007)
+- [[architecture/decisions]] — Architecture Decision Records (ADR-001 through ADR-008)
+- [[architecture/infrastructure-prod]] — Serveur de production (PC atelier) : specs Ubuntu, accès SSH, ports, services colocalisés (Home Assistant, Pi-hole), pièges d'encodage export/import
 
 ---
 

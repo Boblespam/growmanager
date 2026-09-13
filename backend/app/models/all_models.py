@@ -404,6 +404,12 @@ class Culture(Base):
     )
     plants = relationship("Plant", back_populates="culture")
     actions = relationship("ActionCalendrier", back_populates="culture")
+    emplacements = relationship(
+        "CultureEmplacement",
+        back_populates="culture",
+        cascade="all, delete-orphan",
+        order_by="CultureEmplacement.date_debut",
+    )
     recoltes = relationship(
         "Recolte",
         secondary="RecolteCulture",
@@ -1112,6 +1118,20 @@ class SuiviCulture(Base):
 
 
 # ============ Espaces de culture ============
+
+class CultureEmplacement(Base):
+    """Affectation d'une culture à un espace, avec dates de début/fin."""
+    __tablename__ = "CultureEmplacement"
+
+    id_emplacement = Column(Integer, primary_key=True, autoincrement=True)
+    id_culture     = Column(Integer, ForeignKey("Culture.id_culture", ondelete="CASCADE"), nullable=False)
+    id_espace      = Column(Integer, ForeignKey("EspaceCulture.id_espace"), nullable=False)
+    date_debut     = Column(Date, nullable=False)
+    date_fin       = Column(Date, nullable=True)   # NULL = affectation en cours ; intervalle [debut, fin)
+
+    culture = relationship("Culture", back_populates="emplacements")
+    espace  = relationship("EspaceCulture")
+
 
 class EspaceCulture(Base):
     __tablename__ = "EspaceCulture"

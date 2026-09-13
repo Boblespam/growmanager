@@ -158,6 +158,26 @@ class CultureCreate(BaseModel):
     plantes_externes: Optional[list[PlantExterneCreate]] = None
 
 
+class CultureEmplacementRead(BaseModel):
+    id_emplacement: int
+    id_culture: int
+    id_espace: int
+    nom_espace: Optional[str] = None
+    date_debut: date
+    date_fin: Optional[date] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CultureDeplacerPayload(BaseModel):
+    id_espace: int
+    date_deplacement: date
+
+
+class CultureEmplacementDatePayload(BaseModel):
+    date_debut: date
+
+
 class CultureUpdate(BaseModel):
     nom: Optional[str] = None
     id_espace: Optional[int] = None
@@ -199,6 +219,7 @@ class CultureRead(BaseModel):
     jours_culture: Optional[int] = None
     jours_depuis_dernier_arrosage: Optional[int] = None
     jours_depuis_dernier_tco: Optional[int] = None
+    emplacements: list[CultureEmplacementRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 

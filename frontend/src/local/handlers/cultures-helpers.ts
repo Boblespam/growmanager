@@ -2,6 +2,7 @@
 // Miroir des helpers de backend/app/routers/cultures.py :
 // enrichissements, coûts, dates de récolte, effets d'actions, archivage.
 import { query, one, count, insert, run, boolify, jsonify } from '../helpers'
+import { LocalHttpError } from '../router'
 
 export type Row = Record<string, unknown>
 
@@ -183,6 +184,8 @@ export async function enrichCulture(culture: Row): Promise<Row> {
 
   const totalRecolte = plants.reduce((s, p) => s + (p.poids_recolte_g ? Number(p.poids_recolte_g) : 0), 0)
 
+  await ensureInitialEmplacement(culture)
+
   return {
     id_culture: culture.id_culture,
     nom: culture.nom,
@@ -207,6 +210,7 @@ export async function enrichCulture(culture: Row): Promise<Row> {
     jours_depuis_dernier_arrosage: joursArrosage,
     jours_depuis_dernier_tco: joursTco,
     total_recolte_g: totalRecolte || null,
+    emplacements: await listEmplacements(Number(culture.id_culture)),
   }
 }
 
@@ -757,4 +761,149 @@ export async function handleActionEffects(action: Row, culture: Row): Promise<vo
   }
   // pincage / detection_maladie / detection_parasite / traitement / ouverture_bocal :
   // actions informationnelles, aucun effet de bord.
+}
+
+export async function serializeEmplacement(row: Row): Promise<Row> {
+  let nom: unknown = null
+  if (row.id_espace) {
+    const esp = await one<Row>('SELECT nom FROM "EspaceCulture" WHERE id_espace = ?', [row.id_espace])
+    nom = esp?.nom ?? null
+  }
+  return {
+    id_emplacement: row.id_emplacement,
+    id_culture: row.id_culture,
+    id_espace: row.id_espace,
+    nom_espace: nom,
+    date_debut: asDate(row.date_debut),
+    date_fin: asDate(row.date_fin),
+  }
+}
+
+export async function listEmplacements(idCulture: number): Promise<Row[]> {
+  const rows = await query<Row>(
+    `SELECT * FROM "CultureEmplacement" WHERE id_culture = ? ORDER BY date_debut DESC, id_emplacement DESC`,
+    [idCulture])
+  return Promise.all(rows.map(serializeEmplacement))
+}
+
+export async function ensureInitialEmplacement(culture: Row): Promise<void> {
+  if (!culture.id_espace) return
+  const existing = await one<Row>(
+    'SELECT id_emplacement FROM "CultureEmplacement" WHERE id_culture = ?', [culture.id_culture])
+  if (existing) return
+  await insert('CultureEmplacement', {
+    id_culture: culture.id_culture,
+    id_espace: culture.id_espace,
+    date_debut: asDate(culture.date_debut) ?? todayISO(),
+    date_fin: null,
+  })
+}
+
+export function espaceIdAt(rows: Row[], jour: string, fallback?: number | null): number | null {
+  const covering = rows.filter(e => {
+    const debut = String(e.date_debut).slice(0, 10)
+    const fin = e.date_fin ? String(e.date_fin).slice(0, 10) : null
+    return debut <= jour && (fin === null || jour < fin)
+  })
+  if (covering.length) {
+    covering.sort((a, b) => String(b.date_debut).localeCompare(String(a.date_debut)))
+    return Number(covering[0].id_espace)
+  }
+  if (!rows.length) return fallback ?? null
+  const sorted = [...rows].sort((a, b) => String(a.date_debut).localeCompare(String(b.date_debut)))
+  if (jour < String(sorted[0].date_debut).slice(0, 10)) return Number(sorted[0].id_espace)
+  return Number(sorted[sorted.length - 1].id_espace)
+}
+
+export async function deplacerCulture(culture: Row, idEspace: number, dateDeplacement: string): Promise<void> {
+  if (!dateDeplacement) throw new LocalHttpError(400, 'La date de déplacement est obligatoire')
+  const espace = await one<Row>('SELECT * FROM "EspaceCulture" WHERE id_espace = ?', [idEspace])
+  if (!espace) throw new LocalHttpError(404, 'Espace de culture introuvable')
+  if (Number(culture.id_espace) === idEspace) {
+    throw new LocalHttpError(400, 'La culture est déjà dans cet espace')
+  }
+  const occupant = await one<Row>(
+    `SELECT nom FROM "Culture" WHERE id_espace = ? AND statut IN ('active','sechage_curing') AND id_culture != ?`,
+    [idEspace, culture.id_culture])
+  if (occupant) {
+    throw new LocalHttpError(409, `L'espace « ${espace.nom} » est déjà occupé par « ${occupant.nom} ».`)
+  }
+  await ensureInitialEmplacement(culture)
+  const courant = await one<Row>(
+    `SELECT * FROM "CultureEmplacement" WHERE id_culture = ? AND date_fin IS NULL ORDER BY date_debut DESC LIMIT 1`,
+    [culture.id_culture])
+  if (courant) {
+    const debut = String(courant.date_debut).slice(0, 10)
+    if (dateDeplacement < debut) {
+      throw new LocalHttpError(400,
+        "La date de déplacement doit être postérieure ou égale au début de l'affectation actuelle")
+    }
+    await run('UPDATE "CultureEmplacement" SET date_fin = ? WHERE id_emplacement = ?',
+      [dateDeplacement, courant.id_emplacement])
+  }
+  await insert('CultureEmplacement', {
+    id_culture: culture.id_culture,
+    id_espace: idEspace,
+    date_debut: dateDeplacement,
+    date_fin: null,
+  })
+  await run('UPDATE "Culture" SET id_espace = ? WHERE id_culture = ?', [idEspace, culture.id_culture])
+}
+
+export async function corrigerDateEmplacement(
+  culture: Row,
+  idEmplacement: number,
+  nouvelleDate: string,
+): Promise<void> {
+  if (!nouvelleDate) throw new LocalHttpError(400, 'La date de début est obligatoire')
+  const row = await one<Row>(
+    `SELECT * FROM "CultureEmplacement" WHERE id_emplacement = ? AND id_culture = ?`,
+    [idEmplacement, culture.id_culture])
+  if (!row) throw new LocalHttpError(404, 'Affectation introuvable')
+
+  const actuelle = String(row.date_debut).slice(0, 10)
+  if (nouvelleDate === actuelle) return
+
+  const rows = await query<Row>(
+    `SELECT * FROM "CultureEmplacement" WHERE id_culture = ? ORDER BY date_debut ASC, id_emplacement ASC`,
+    [culture.id_culture])
+  const idx = rows.findIndex(r => Number(r.id_emplacement) === idEmplacement)
+  if (idx < 0) throw new LocalHttpError(404, 'Affectation introuvable')
+
+  const precedent = idx > 0 ? rows[idx - 1] : null
+  const suivant = idx + 1 < rows.length ? rows[idx + 1] : null
+
+  if (!precedent) {
+    const debutCulture = asDate(culture.date_debut)
+    if (debutCulture && nouvelleDate < debutCulture) {
+      throw new LocalHttpError(400, 'La date ne peut pas être antérieure au début de la culture')
+    }
+  } else if (nouvelleDate <= String(precedent.date_debut).slice(0, 10)) {
+    throw new LocalHttpError(400, "La date doit être postérieure au début de l'affectation précédente")
+  }
+
+  let finEffective = row.date_fin ? String(row.date_fin).slice(0, 10) : null
+  if (suivant) {
+    const debutSuivant = String(suivant.date_debut).slice(0, 10)
+    if (!finEffective || debutSuivant < finEffective) finEffective = debutSuivant
+  }
+  if (finEffective && nouvelleDate >= finEffective) {
+    throw new LocalHttpError(400, 'La date créerait un intervalle vide ou négatif')
+  }
+
+  await run('UPDATE "CultureEmplacement" SET date_debut = ? WHERE id_emplacement = ?',
+    [nouvelleDate, idEmplacement])
+  if (precedent) {
+    await run('UPDATE "CultureEmplacement" SET date_fin = ? WHERE id_emplacement = ?',
+      [nouvelleDate, precedent.id_emplacement])
+  }
+
+  const courant = await one<Row>(
+    `SELECT * FROM "CultureEmplacement" WHERE id_culture = ? AND date_fin IS NULL
+     ORDER BY date_debut DESC, id_emplacement DESC LIMIT 1`,
+    [culture.id_culture])
+  if (courant) {
+    await run('UPDATE "Culture" SET id_espace = ? WHERE id_culture = ?',
+      [courant.id_espace, culture.id_culture])
+  }
 }

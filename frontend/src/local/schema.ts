@@ -550,6 +550,16 @@ export const SCHEMA_STATEMENTS: string[] = [
 	FOREIGN KEY(id_box) REFERENCES "Box" (id_box), 
 	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
 )`,
+`CREATE TABLE "CultureEmplacement" (
+	id_emplacement INTEGER NOT NULL,
+	id_culture INTEGER NOT NULL,
+	id_espace INTEGER NOT NULL,
+	date_debut DATE NOT NULL,
+	date_fin DATE,
+	PRIMARY KEY (id_emplacement),
+	FOREIGN KEY(id_culture) REFERENCES "Culture" (id_culture) ON DELETE CASCADE,
+	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
+)`,
 `CREATE TABLE "EspaceMateriel" (
 	id_espace_materiel INTEGER NOT NULL, 
 	id_espace INTEGER NOT NULL, 
