@@ -59,6 +59,7 @@ async function migrate(conn: SQLiteDBConnection): Promise<void> {
         updated_at DATETIME,
         PRIMARY KEY (id_config)
       );`, false)
+      }
     if (current < 3 && current > 0) {
       await conn.execute(`CREATE TABLE IF NOT EXISTS "CultureEmplacement" (
         id_emplacement INTEGER NOT NULL,
