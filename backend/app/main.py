@@ -4,14 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from app.database import Base, engine
-from app.routers import breeders, varietes, graines, cultures, stock, extractions, dashboard, fournisseurs, import_export, historique_culture, materiel, parametre, engrais, recette_engrais, recette_tco, recette_lso, recette_reamendement, recette_arrosage, recette_fermentation, suivi_sol_vivant, espaces, capteurs, plan_culture, preparation_substrat, notation_variete, vaporisateur, sechage, curing, croisement, app_settings, consommation, photos, stock_alert_seuils, search, calendrier, esphome, open_field
+from app.routers import breeders, varietes, graines, cultures, stock, extractions, dashboard, fournisseurs, import_export, historique_culture, materiel, parametre, engrais, recette_engrais, recette_tco, recette_lso, recette_reamendement, recette_arrosage, recette_fermentation, suivi_sol_vivant, espaces, capteurs, plan_culture, preparation_substrat, notation_variete, vaporisateur, sechage, curing, croisement, app_settings, consommation, photos, stock_alert_seuils, search, calendrier, esphome, open_field, tapo
 from app.services.govee_poller import start_poller
 
 # Création de l'application FastAPI
 app = FastAPI(
     title="GrowManager API",
     description="API pour la gestion de cultures de cannabis",
-    version="3.4.4",
+    version="3.4.10",
 )
 
 # Configuration CORS pour le développement
@@ -86,6 +86,7 @@ def run_migrations():
         # TemperatureLog — extension Govee (vpd, id_device, id_culture nullable)
         ("TemperatureLog", "vpd",       "ALTER TABLE TemperatureLog ADD COLUMN vpd FLOAT"),
         ("TemperatureLog", "id_device", "ALTER TABLE TemperatureLog ADD COLUMN id_device INT REFERENCES GoveeDevice(id_device)"),
+        ("GoveeDevice",   "source",     "ALTER TABLE GoveeDevice ADD COLUMN source VARCHAR(20) NULL"),
         # Stock — sortie de stock + bocal Materiel + substrat
         ("Stock", "date_fin_stock",    "ALTER TABLE Stock ADD COLUMN date_fin_stock DATE NULL"),
         ("Stock", "id_materiel_bocal", "ALTER TABLE Stock ADD COLUMN id_materiel_bocal INT NULL REFERENCES Materiel(id_materiel)"),
@@ -265,6 +266,35 @@ def seed_parametres():
 
 seed_parametres()
 
+def seed_culture_emplacements():
+    """Affectation initiale = espace actuel à date_debut. Aucun déplacement inventé."""
+    from datetime import date as _date
+    from app.models import Culture, CultureEmplacement
+    db = _SessionLocal()
+    try:
+        cultures = db.query(Culture).filter(Culture.id_espace.isnot(None)).all()
+        for c in cultures:
+            exists = (
+                db.query(CultureEmplacement)
+                .filter(CultureEmplacement.id_culture == c.id_culture)
+                .first()
+            )
+            if exists:
+                continue
+            db.add(CultureEmplacement(
+                id_culture=c.id_culture,
+                id_espace=c.id_espace,
+                date_debut=c.date_debut or _date.today(),
+                date_fin=None,
+            ))
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+seed_culture_emplacements()
+
 # Inclusion des routers
 app.include_router(breeders.router)
 app.include_router(varietes.router)
@@ -303,6 +333,7 @@ app.include_router(stock_alert_seuils.router)
 app.include_router(search.router)
 app.include_router(calendrier.router)
 app.include_router(esphome.router)
+app.include_router(tapo.router)
 
 # Fichiers statiques — photos uploadées
 import os
@@ -318,7 +349,7 @@ def read_root():
     """Endpoint racine"""
     return {
         "message": "Bienvenue sur l'API GrowManager",
-        "version": "3.4.4",
+        "version": "3.4.10",
         "docs": "/docs",
     }
 

@@ -6,6 +6,68 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-09-13] Feature | Intégration Tapo H100 — PR externe #5 mergée + déployée en prod
+
+**Contexte :** PR #5 (`Devilouned/feat/tapo-h100-local`) — intégration de capteurs Tapo T310/T315 via hub H100 local, en parallèle de la PR #6 (historique des emplacements de culture, déjà mergée le 2026-09-12).
+
+**Revue :** les 3 points de correction demandés (modèle `TapoConfig` + export, migration `GoveeDevice.source` idempotente, enregistrement du routeur) confirmés directement dans le code, ainsi que les 7 tests unitaires (`backend/test_tapo_service.py`).
+
+**Conflit détecté avant merge :** PR #5 et PR #6 ont chacune bumpé `SCHEMA_VERSION` (schéma SQLite local du mode mobile standalone) en partant du même point (`1` → `2`), sans le savoir l'une de l'autre. PR #6 mergée en premier (bump réel vers `3`), créant un conflit direct sur `frontend/src/local/db.ts` et `schema.ts` avec PR #5. Résolu via l'éditeur de conflits GitHub : migration Tapo renumérotée en version `4`, les deux blocs de migration (`CultureEmplacement` v3, Tapo v4) conservés côte à côte.
+
+**Incident lors de la résolution :** le bouton "Accept both changes" de l'éditeur GitHub a concaténé les deux blocs sans réinsérer l'accolade fermante commune aux deux côtés du conflit, cassant la syntaxe de `db.ts` (vérifié par comptage d'accolades). Corrigé par une seconde édition directe du fichier sur la branche de la PR avant le merge définitif.
+
+**Déployé en prod** le 2026-09-13 via `./update.sh latest`, sans incident sur les données.
+
+**Bug découvert au déploiement :** race condition entre les 2 workers Uvicorn du backend sur la création de la table `TapoConfig` (plantage bref d'un worker, auto-résolu, aucune perte de données). Détail complet et pistes de correction : [[bugs/tapoconfig-migration-race]].
+
+**Fichiers modifiés :** `wiki/roadmap.md` (section Tapo H100), `wiki/bugs/tapoconfig-migration-race.md` (nouveau), `wiki/architecture/patterns.md` (note section 1), `CHANGELOG.md` (section Ajouté).
+
+Validé 2026-09-13.
+
+---
+
+## [2026-09-12] Incident prod | Panne auth MySQL après `update.sh` — `.env.production` jamais lu
+
+**Symptôme :** dashboard en échec de chargement juste après un `./update.sh latest` pourtant réussi côté script. Logs backend : `Access denied for user 'grow'@'172.18.0.2'`.
+
+**Cause :** `update.sh` appelle `docker compose -f docker-compose.prod.yml` sans `--env-file .env.production` — Compose ne charge que `.env` par défaut, donc le backend recréé retombe sur les identifiants MySQL par défaut du compose file au lieu des vrais, alors que `db` (jamais redémarré par `update.sh`) garde le vrai mot de passe.
+
+**Résolu :** vrai mot de passe root retrouvé via `docker inspect growmanager-db-1` (les env vars de création restent lisibles même si `.env.production` a changé depuis), compte `grow` réaligné sur `.env.production`, puis `ln -sf .env.production .env` sur le serveur pour que `docker compose` charge automatiquement les bonnes variables à l'avenir. Conteneur recréé (`up -d --force-recreate`, un simple `restart` ne suffit pas — variables figées à la création).
+
+**Détail complet, y compris la commande exacte de récupération du mot de passe root :** [[architecture/infrastructure-prod]] section 6.
+
+**Fichiers modifiés :** `wiki/architecture/infrastructure-prod.md` (nouveau piège documenté).
+
+Validé 2026-09-12.
+
+---
+
+## [2026-09-12] Documentation | Infrastructure serveur de production (PC atelier)
+
+**Contexte :** fiche technique du serveur de prod extraite du suivi du projet Home Assistant du Clapié (mise en place réalisée le 09/09/2026), intégrée au wiki GrowManager.
+
+**Ajouté :** nouvelle page [[architecture/infrastructure-prod]] — specs serveur (PC atelier, Ubuntu 24.04.5 LTS, `192.168.1.156` en IP réservée DHCP, Docker 29.6.1 / Compose v5.3.1), accès SSH (`ssh clapie`, clé `id_ed25519`), table des ports (GrowManager + Home Assistant `8123` en `--network=host` colocalisé sans conflit, Pi-hole `53`/`8081`), étapes de migration dev→prod (dump SQL + `backend/uploads` via `scp`, vérification d'intégrité par comptage), config Pi-hole (DNS local abandonné au profit de l'accès par IP), et 4 pièges rencontrés documentés pour référence future : redirection `mysqldump` sous PowerShell (UTF-16), volume MySQL figeant `MYSQL_ROOT_PASSWORD`, réutilisation d'image Docker dev/prod (toujours `--build --remove-orphans`), et corruption d'encodage CP850 lors de l'export/import (détection par marqueurs hexadécimaux + requête `CONVERT` de correction).
+
+**Files modified :** `wiki/architecture/infrastructure-prod.md` (nouveau), `wiki/overview.md` (section Production enrichie + lien), `wiki/index.md` (lien ajouté sous Architecture).
+
+---
+
+## [2026-09-12] Fix ci | Workflow Docker Publish ne taguait jamais `:latest`
+
+**Contexte :** passage du serveur de prod sur une machine Linux dédiée (`192.168.1.156`, accès `ssh clapie`), dépôt cloné dans `~/growmanager`. Premier `./update.sh latest` en échec : `Error response from daemon: manifest unknown`.
+
+**Cause :** `.github/workflows/docker-publish.yml` ne taguait les images `ghcr.io/mdf73/growmanager-{backend,frontend}` qu'avec `main` (branche) et `sha-xxxxx` (commit) à chaque push sur `main`. Le tag `latest` de `docker/metadata-action` n'est ajouté automatiquement que sur un tag Git semver (`vX.Y.Z`), jamais sur un simple push de branche — alors que `update.sh` et la doc supposaient `:latest` toujours disponible.
+
+**Fix :** ajout de `flavor: | latest=true` dans les deux blocs "Docker meta" (Backend et Frontend) de `docker-publish.yml`. Chaque build sur `main` publie désormais aussi `:latest`, en plus de `:main` et `:sha-xxxxx`.
+
+**Contournement utilisé le temps du fix :** `./update.sh main` (le tag `main` existait déjà et pointait sur le bon commit).
+
+**Fichiers modifiés :** `.github/workflows/docker-publish.yml`, `wiki/overview.md` (section Production mise à jour : serveur dédié + déploiement pull-based).
+
+Validé 2026-09-12.
+
+---
+
 ## [2026-07-16] Fix | Page Stock — texte illisible sur carte de type sélectionnée en mode nuit
 
 **Demande (Pik) :** en dark mode, les cartes de filtre par type (Fleur / Hash / Rosin...) sélectionnées passaient sur fond clair (`bg-grow-50` / `bg-cyan-50`) mais le texte gardait ses variantes dark (blanc) → illisible.
@@ -769,6 +831,29 @@ Explored entire GrowManager codebase (backend + frontend + docs) and bootstrappe
 - `frontend/src/pages/ComparaisonCultures.tsx` — page complète (~600 lignes)
 - `frontend/src/App.tsx` — route `/comparaison-cultures`
 - `frontend/src/components/Layout.tsx` — nav sous-menu Culture
+
+## [2026-09-12] Historique des emplacements de culture
+
+Merge de la **PR #6** (contributeur externe Devilouned) : `git pull` avant lecture, revue et merge de deux PR indépendantes du même contributeur (voir aussi PR #5, corrections demandées, non mergée en l'état).
+
+### Nouvelles fonctionnalités
+- **`CultureEmplacement`** (nouvelle table) : historique des affectations culture ↔ espace, en intervalles `[date_debut, date_fin)`. Voir [[database/database-spaces]].
+- **`POST /api/cultures/{id}/deplacer`**, **`PUT /api/cultures/{id}/emplacements/{id}`**, **`GET /api/cultures/{id}/emplacements`**, **`GET /api/cultures/{id}/espace-at`** : nouveaux endpoints de gestion/consultation de l'historique.
+- **`DeplacerCultureModal`** et **`ModifierDateEmplacementModal`** (page Culture) : UI de déplacement entre espaces et de correction de date, avec blocage si l'espace cible est déjà occupé par une culture active.
+- **Calendrier / export PDF** : les courbes capteurs (`SensorDayChart`) et l'export PDF résolvent désormais l'espace réellement occupé à chaque date via l'historique, au lieu de l'espace actuel de la culture — utile pour les cultures qui changent de box entre croissance et floraison.
+- **Suppression d'espace bloquée (409)** si l'espace est encore utilisé par une culture ou apparaît dans l'historique d'une culture.
+- **Backfill automatique** : `seed_culture_emplacements()` (backend) et migration SQLite `SCHEMA_VERSION` 1→3 (app standalone) créent rétroactivement l'affectation initiale des cultures existantes à partir de leur espace courant.
+
+### Files modified
+- `backend/app/models/all_models.py`, `backend/app/models/__init__.py` — modèle `CultureEmplacement`
+- `backend/app/main.py` — `seed_culture_emplacements()` au démarrage
+- `backend/app/routers/culture_helpers.py` — logique d'intervalles (`ensure_initial_emplacement`, `deplacer_culture`, `corriger_date_emplacement`, `espace_id_at`)
+- `backend/app/routers/cultures.py`, `backend/app/routers/espaces.py`, `backend/app/schemas/culture.py` — nouveaux endpoints, garde de suppression, schémas
+- `frontend/src/pages/Culture.tsx`, `frontend/src/components/culture/DeplacerCultureModal.tsx`, `frontend/src/components/culture/ModifierDateEmplacementModal.tsx`, `frontend/src/components/culture/CalendrierCulture.tsx`, `frontend/src/utils/cultureEmplacement.ts`, `frontend/src/api/cultures.ts` — UI et résolution d'espace par date
+- `frontend/src/local/db.ts`, `frontend/src/local/schema.ts`, `frontend/src/local/handlers/cultures.ts`, `frontend/src/local/handlers/cultures-helpers.ts`, `frontend/src/local/handlers/espaces.ts` — miroir complet côté app standalone (mode hors-ligne)
+
+### À faire
+- Pas de tests backend automatisés sur `culture_helpers.py` pour cette logique d'intervalles (chevauchements, dates aux bornes) — à ajouter si on retouche cette zone.
 
 ## [2026-06-11] Normalisation des unités — coûts & déductions de stock
 

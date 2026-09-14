@@ -404,6 +404,12 @@ class Culture(Base):
     )
     plants = relationship("Plant", back_populates="culture")
     actions = relationship("ActionCalendrier", back_populates="culture")
+    emplacements = relationship(
+        "CultureEmplacement",
+        back_populates="culture",
+        cascade="all, delete-orphan",
+        order_by="CultureEmplacement.date_debut",
+    )
     recoltes = relationship(
         "Recolte",
         secondary="RecolteCulture",
@@ -518,6 +524,7 @@ class GoveeDevice(Base):
     nom          = Column(String(200), nullable=False)          # ex: "Box Floraison 1"
     device_id    = Column(String(100), nullable=True)           # MAC ou device ID Govee
     modele       = Column(String(50),  nullable=True)           # ex: H5179
+    source       = Column(String(20),  nullable=True, default="govee")  # govee | tapo | esphome
     ip_lan       = Column(String(50),  nullable=True)           # IP locale (LAN API)
     id_espace    = Column(Integer, ForeignKey("EspaceCulture.id_espace"), nullable=True)
     actif        = Column(Boolean, default=True)
@@ -526,6 +533,21 @@ class GoveeDevice(Base):
     espace = relationship("EspaceCulture")
     logs   = relationship("TemperatureLog", back_populates="device",
                           cascade="all, delete-orphan")
+
+
+class TapoConfig(Base):
+    """Configuration unique du relais local Tapo H100."""
+    __tablename__ = "TapoConfig"
+
+    id_config          = Column(Integer, primary_key=True, autoincrement=True)
+    enabled            = Column(Boolean, nullable=False, default=False)
+    hub_ip             = Column(String(50), nullable=True)
+    username           = Column(String(255), nullable=True)
+    password_encrypted = Column(Text, nullable=True)
+    last_status        = Column(String(50), nullable=True)
+    last_error         = Column(Text, nullable=True)
+    last_poll_at       = Column(DateTime, nullable=True)
+    updated_at         = Column(DateTime, nullable=True, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class TemperatureLog(Base):
@@ -1096,6 +1118,20 @@ class SuiviCulture(Base):
 
 
 # ============ Espaces de culture ============
+
+class CultureEmplacement(Base):
+    """Affectation d'une culture à un espace, avec dates de début/fin."""
+    __tablename__ = "CultureEmplacement"
+
+    id_emplacement = Column(Integer, primary_key=True, autoincrement=True)
+    id_culture     = Column(Integer, ForeignKey("Culture.id_culture", ondelete="CASCADE"), nullable=False)
+    id_espace      = Column(Integer, ForeignKey("EspaceCulture.id_espace"), nullable=False)
+    date_debut     = Column(Date, nullable=False)
+    date_fin       = Column(Date, nullable=True)   # NULL = affectation en cours ; intervalle [debut, fin)
+
+    culture = relationship("Culture", back_populates="emplacements")
+    espace  = relationship("EspaceCulture")
+
 
 class EspaceCulture(Base):
     __tablename__ = "EspaceCulture"

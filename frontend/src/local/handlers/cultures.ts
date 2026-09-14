@@ -8,6 +8,8 @@ import {
   Row, enrichCulture, enrichPlant, enrichAction, buildPlantName,
   maybeArchiveCulture, computeCultureCost, computeHarvestDate, handleActionEffects,
   todayISO, toSmallUnit, prixParPetiteUnite,
+  ensureInitialEmplacement, listEmplacements, deplacerCulture, espaceIdAt,
+  corrigerDateEmplacement,
 } from './cultures-helpers'
 
 async function loadCulture(id: unknown): Promise<Row> {
@@ -214,6 +216,12 @@ route('POST', '/cultures', async ({ body }) => {
     notes: payload.notes ?? null,
     phase: culturePhase,
   })
+  await insert('CultureEmplacement', {
+    id_culture: idCulture,
+    id_espace: payload.id_espace,
+    date_debut: dateDebut,
+    date_fin: null,
+  })
 
   let plantCounter = 1
 
@@ -271,15 +279,19 @@ route('POST', '/cultures', async ({ body }) => {
 })
 
 route('PUT', '/cultures/:id', async ({ params, body }) => {
-  await loadCulture(params.id)
+  const culture = await loadCulture(params.id)
   const p = body as Row
   const upd: Row = {}
-  for (const f of ['nom', 'id_espace', 'date_debut', 'statut', 'date_fin', 'date_recolte_estimee',
+  for (const f of ['nom', 'date_debut', 'statut', 'date_fin', 'date_recolte_estimee',
                    'date_passage_12_12', 'date_debut_floraison', 'phase',
                    'type_culture', 'type_eclairage', 'but_culture', 'notes']) {
     if (p[f] !== null && p[f] !== undefined) upd[f] = p[f]
   }
   await updateById('Culture', 'id_culture', params.id, upd)
+  if (p.id_espace !== null && p.id_espace !== undefined && Number(p.id_espace) !== Number(culture.id_espace)) {
+    const current = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
+    await deplacerCulture(current!, Number(p.id_espace), todayISO())
+  }
   const updated = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
   if (p.date_passage_12_12) await computeHarvestDate(updated!)
   const final = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
@@ -295,6 +307,7 @@ route('DELETE', '/cultures/:id', async ({ params }) => {
   }
   await run('DELETE FROM "ActionCalendrier" WHERE id_culture = ?', [params.id])
   await run('DELETE FROM "Plant" WHERE id_culture = ?', [params.id])
+  await run('DELETE FROM "CultureEmplacement" WHERE id_culture = ?', [params.id])
   await run('DELETE FROM "Culture" WHERE id_culture = ?', [params.id])
   return { status: 204 }
 })
@@ -312,6 +325,48 @@ route('POST', '/cultures/:id/close', async ({ params }) => {
     await run('UPDATE "Culture" SET statut = ?, date_fin = COALESCE(date_fin, ?) WHERE id_culture = ?',
       ['terminee', todayISO(), params.id])
   }
+  const final = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
+  return { data: await enrichCulture(final!) }
+})
+
+route('GET', '/cultures/:id/emplacements', async ({ params }) => {
+  const culture = await loadCulture(params.id)
+  await ensureInitialEmplacement(culture)
+  return { data: await listEmplacements(Number(params.id)) }
+})
+
+route('GET', '/cultures/:id/espace-at', async ({ params, query: q }) => {
+  const culture = await loadCulture(params.id)
+  await ensureInitialEmplacement(culture)
+  const jour = q.get('date')
+  if (!jour) throw new LocalHttpError(400, 'date requise')
+  const rows = await query<Row>('SELECT * FROM "CultureEmplacement" WHERE id_culture = ?', [params.id])
+  const idEspace = espaceIdAt(rows, jour, culture.id_espace as number | null)
+  let nomEspace: unknown = null
+  if (idEspace) {
+    const esp = await one<Row>('SELECT nom FROM "EspaceCulture" WHERE id_espace = ?', [idEspace])
+    nomEspace = esp?.nom ?? null
+  }
+  return { data: { id_espace: idEspace, nom_espace: nomEspace, date: jour } }
+})
+
+route('POST', '/cultures/:id/deplacer', async ({ params, body }) => {
+  const culture = await loadCulture(params.id)
+  const p = body as Row
+  if (p.id_espace === null || p.id_espace === undefined) {
+    throw new LocalHttpError(400, 'id_espace est obligatoire')
+  }
+  const dateDepl = typeof p.date_deplacement === 'string' ? p.date_deplacement.slice(0, 10) : ''
+  await deplacerCulture(culture, Number(p.id_espace), dateDepl)
+  const final = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
+  return { data: await enrichCulture(final!) }
+})
+
+route('PUT', '/cultures/:id/emplacements/:emplacement_id', async ({ params, body }) => {
+  const culture = await loadCulture(params.id)
+  const p = body as Row
+  const dateDebut = typeof p.date_debut === 'string' ? p.date_debut.slice(0, 10) : ''
+  await corrigerDateEmplacement(culture, Number(params.emplacement_id), dateDebut)
   const final = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [params.id])
   return { data: await enrichCulture(final!) }
 })
@@ -403,6 +458,12 @@ route('POST', '/cultures/:culture_id/plants/:plant_id/transfer', async ({ params
       date_debut: todayISO(),
       statut: 'active',
     })
+    await insert('CultureEmplacement', {
+      id_culture: targetCultureId,
+      id_espace: p.target_espace_id,
+      date_debut: todayISO(),
+      date_fin: null,
+    })
   }
   await run('UPDATE "Plant" SET id_culture = ? WHERE id_plant = ?', [targetCultureId, params.plant_id])
   await run('UPDATE "ActionCalendrier" SET id_culture = ? WHERE id_plant = ? AND id_culture = ?',
@@ -443,6 +504,12 @@ route('POST', '/cultures/:culture_id/plants/:plant_id/clone', async ({ params, b
         type_eclairage: 'Autre',
         but_culture: 'Reproduction',
         phase: 'veg',
+      })
+      await insert('CultureEmplacement', {
+        id_culture: idNew,
+        id_espace: idEspace,
+        date_debut: todayISO(),
+        date_fin: null,
       })
       cultureCible = await one<Row>('SELECT * FROM "Culture" WHERE id_culture = ?', [idNew])
     }

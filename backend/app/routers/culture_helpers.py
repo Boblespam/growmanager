@@ -7,10 +7,12 @@ des plantes.
 """
 from collections import Counter
 from datetime import date
+from typing import Optional
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import Culture, Plant, ActionCalendrier, EspaceCulture, Graine, ProduitEngrais
+from app.models import Culture, CultureEmplacement, Plant, ActionCalendrier, EspaceCulture, Graine, ProduitEngrais
 from app.models.all_models import (
     HistoriqueCulture, HistoriquePlant,
     CultureLampe, Lampe, AppSettings, EspaceMateriel, Materiel, RecetteEngrais,
@@ -329,3 +331,227 @@ def _compute_culture_cost(id_culture: int, db: Session, date_fin_override=None) 
         "cout_par_gramme":  cout_par_gramme,
         "puissance_w":      puissance_w,
     }
+
+
+# ── Historique des emplacements (déplacement de culture) ─────────────────────
+
+def serialize_emplacement(row: CultureEmplacement, db: Session) -> dict:
+    nom = None
+    if row.id_espace:
+        esp = db.query(EspaceCulture).filter(EspaceCulture.id_espace == row.id_espace).first()
+        nom = esp.nom if esp else None
+    return {
+        "id_emplacement": row.id_emplacement,
+        "id_culture": row.id_culture,
+        "id_espace": row.id_espace,
+        "nom_espace": nom,
+        "date_debut": row.date_debut,
+        "date_fin": row.date_fin,
+    }
+
+
+def list_emplacements(db: Session, id_culture: int) -> list[dict]:
+    rows = (
+        db.query(CultureEmplacement)
+        .filter(CultureEmplacement.id_culture == id_culture)
+        .order_by(CultureEmplacement.date_debut.desc(), CultureEmplacement.id_emplacement.desc())
+        .all()
+    )
+    return [serialize_emplacement(r, db) for r in rows]
+
+
+def ensure_initial_emplacement(db: Session, culture: Culture) -> Optional[CultureEmplacement]:
+    """Crée l'affectation initiale si la culture a un espace et aucun historique."""
+    if not culture.id_espace:
+        return None
+    existing = (
+        db.query(CultureEmplacement)
+        .filter(CultureEmplacement.id_culture == culture.id_culture)
+        .first()
+    )
+    if existing:
+        return existing
+    row = CultureEmplacement(
+        id_culture=culture.id_culture,
+        id_espace=culture.id_espace,
+        date_debut=culture.date_debut or date.today(),
+        date_fin=None,
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def espace_id_at(
+    emplacements: list[CultureEmplacement],
+    jour: date,
+    fallback: Optional[int] = None,
+) -> Optional[int]:
+    """Espace de la culture à `jour`. Intervalle [date_debut, date_fin)."""
+    covering = [
+        e for e in emplacements
+        if e.date_debut <= jour and (e.date_fin is None or jour < e.date_fin)
+    ]
+    if covering:
+        covering.sort(key=lambda e: e.date_debut, reverse=True)
+        return covering[0].id_espace
+    if not emplacements:
+        return fallback
+    first = min(emplacements, key=lambda e: e.date_debut)
+    if jour < first.date_debut:
+        return first.id_espace
+    last = max(emplacements, key=lambda e: (e.date_debut, e.id_emplacement or 0))
+    return last.id_espace
+
+
+def deplacer_culture(db: Session, culture: Culture, id_espace: int, date_deplacement: date) -> Culture:
+    """Clôture l'affectation courante et ouvre la nouvelle. Met à jour culture.id_espace."""
+    if date_deplacement is None:
+        raise HTTPException(status_code=400, detail="La date de déplacement est obligatoire")
+
+    espace = db.query(EspaceCulture).filter(EspaceCulture.id_espace == id_espace).first()
+    if not espace:
+        raise HTTPException(status_code=404, detail="Espace de culture introuvable")
+
+    if culture.id_espace == id_espace:
+        raise HTTPException(status_code=400, detail="La culture est déjà dans cet espace")
+
+    occupant = (
+        db.query(Culture)
+        .filter(
+            Culture.id_espace == id_espace,
+            Culture.statut.in_(["active", "sechage_curing"]),
+            Culture.id_culture != culture.id_culture,
+        )
+        .first()
+    )
+    if occupant:
+        raise HTTPException(
+            status_code=409,
+            detail=f"L'espace « {espace.nom} » est déjà occupé par « {occupant.nom} ».",
+        )
+
+    ensure_initial_emplacement(db, culture)
+
+    courant = (
+        db.query(CultureEmplacement)
+        .filter(
+            CultureEmplacement.id_culture == culture.id_culture,
+            CultureEmplacement.date_fin.is_(None),
+        )
+        .order_by(CultureEmplacement.date_debut.desc())
+        .first()
+    )
+    if courant:
+        if date_deplacement < courant.date_debut:
+            raise HTTPException(
+                status_code=400,
+                detail="La date de déplacement doit être postérieure ou égale au début de l'affectation actuelle",
+            )
+        courant.date_fin = date_deplacement
+
+    db.add(CultureEmplacement(
+        id_culture=culture.id_culture,
+        id_espace=id_espace,
+        date_debut=date_deplacement,
+        date_fin=None,
+    ))
+    culture.id_espace = id_espace
+    db.flush()
+    return culture
+
+
+def corriger_date_emplacement(
+    db: Session,
+    culture: Culture,
+    id_emplacement: int,
+    nouvelle_date: date,
+) -> Culture:
+    """Modifie la date de début d'une affectation et recale la date_fin du voisin précédent."""
+    if nouvelle_date is None:
+        raise HTTPException(status_code=400, detail="La date de début est obligatoire")
+
+    row = (
+        db.query(CultureEmplacement)
+        .filter(
+            CultureEmplacement.id_emplacement == id_emplacement,
+            CultureEmplacement.id_culture == culture.id_culture,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Affectation introuvable")
+
+    if nouvelle_date == row.date_debut:
+        return culture
+
+    rows = (
+        db.query(CultureEmplacement)
+        .filter(CultureEmplacement.id_culture == culture.id_culture)
+        .order_by(CultureEmplacement.date_debut.asc(), CultureEmplacement.id_emplacement.asc())
+        .all()
+    )
+    idx = next((i for i, r in enumerate(rows) if r.id_emplacement == id_emplacement), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Affectation introuvable")
+
+    precedent = rows[idx - 1] if idx > 0 else None
+    suivant = rows[idx + 1] if idx + 1 < len(rows) else None
+
+    if precedent is None:
+        if culture.date_debut and nouvelle_date < culture.date_debut:
+            raise HTTPException(
+                status_code=400,
+                detail="La date ne peut pas être antérieure au début de la culture",
+            )
+    else:
+        if nouvelle_date <= precedent.date_debut:
+            raise HTTPException(
+                status_code=400,
+                detail="La date doit être postérieure au début de l'affectation précédente",
+            )
+
+    fin_effective = row.date_fin
+    if suivant and (fin_effective is None or suivant.date_debut < fin_effective):
+        fin_effective = suivant.date_debut
+    if fin_effective is not None and nouvelle_date >= fin_effective:
+        raise HTTPException(
+            status_code=400,
+            detail="La date créerait un intervalle vide ou négatif",
+        )
+
+    row.date_debut = nouvelle_date
+    if precedent:
+        precedent.date_fin = nouvelle_date
+
+    db.flush()
+
+    tous = (
+        db.query(CultureEmplacement)
+        .filter(CultureEmplacement.id_culture == culture.id_culture)
+        .order_by(CultureEmplacement.date_debut.asc(), CultureEmplacement.id_emplacement.asc())
+        .all()
+    )
+    courants = [r for r in tous if r.date_fin is None]
+    if len(courants) != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cette modification casserait l'affectation courante",
+        )
+    for i, r in enumerate(tous):
+        if r.date_fin is not None and r.date_debut >= r.date_fin:
+            raise HTTPException(
+                status_code=400,
+                detail="La date créerait un intervalle vide ou négatif",
+            )
+        if i + 1 < len(tous):
+            nxt = tous[i + 1]
+            if r.date_fin != nxt.date_debut or nxt.date_debut <= r.date_debut:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cette date chevaucherait une autre affectation",
+                )
+
+    culture.id_espace = courants[0].id_espace
+    db.flush()
+    return culture

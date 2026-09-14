@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.all_models import EspaceCulture, EspaceMateriel, Materiel
+from app.models.all_models import EspaceCulture, EspaceMateriel, Materiel, Culture, CultureEmplacement
 from app.schemas.espaces import (
     EspaceCultureCreate, EspaceCultureUpdate, EspaceCultureRead,
     EspaceMaterielRead,
@@ -129,6 +129,18 @@ def update(espace_id: int, payload: EspaceCultureUpdate, db: Session = Depends(g
 @router.delete("/{espace_id}", status_code=204)
 def delete(espace_id: int, db: Session = Depends(get_db)):
     esp = _load(db, espace_id)
+    occupant = db.query(Culture).filter(Culture.id_espace == espace_id).first()
+    if occupant:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Impossible de supprimer cet espace : il est encore rattaché à la culture « {occupant.nom} ».",
+        )
+    historique = db.query(CultureEmplacement).filter(CultureEmplacement.id_espace == espace_id).first()
+    if historique:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de supprimer cet espace : il figure dans l'historique d'emplacement d'une culture.",
+        )
     db.delete(esp); db.commit()
 
 

@@ -1,5 +1,7 @@
 import client from './client'
 
+export type SensorSource = 'govee' | 'tapo' | 'esphome'
+
 // ── GoveeDevice ───────────────────────────────────────────────────────────────
 
 export interface GoveeDevice {
@@ -7,6 +9,7 @@ export interface GoveeDevice {
   nom: string
   device_id?: string
   modele?: string
+  source?: SensorSource
   ip_lan?: string
   id_espace?: number
   actif: boolean
@@ -23,6 +26,7 @@ export interface GoveeDeviceCreate {
   nom: string
   device_id?: string
   modele?: string
+  source?: SensorSource
   ip_lan?: string
   id_espace?: number
   actif?: boolean
@@ -44,6 +48,56 @@ export interface TemperatureLog {
   vpd?: number
   source?: string
   nom_device?: string
+}
+
+// ── Tapo H100 ────────────────────────────────────────────────────────────────
+
+export interface TapoConfig {
+  enabled: boolean
+  hub_ip?: string
+  username?: string
+  credentials_set: boolean
+  last_status?: string
+  last_error?: string
+  last_poll_at?: string
+}
+
+export interface TapoConfigUpdate {
+  enabled?: boolean
+  hub_ip?: string
+  username?: string
+  password?: string
+}
+
+export interface TapoTestResult {
+  connected: boolean
+  message: string
+  child_count: number
+}
+
+export interface TapoDiscoveryDevice {
+  device_id: string
+  modele: 'T310' | 'T315'
+  device_name: string
+  temperature?: number
+  humidite?: number
+  already_registered: boolean
+}
+
+export interface TapoDeviceCreate {
+  nom: string
+  device_id: string
+  modele: 'T310' | 'T315'
+  id_espace?: number
+  actif?: boolean
+  notes?: string
+}
+
+export interface TapoDeviceUpdate {
+  nom?: string
+  id_espace?: number | null
+  actif?: boolean
+  notes?: string
 }
 
 export interface TemperatureLogCreate {
@@ -102,6 +156,7 @@ export interface GoveeCloudDevice {
 export interface PollResult {
   device_id: number
   nom: string
+  source?: SensorSource
   success: boolean
   temperature?: number
   humidite?: number
@@ -158,6 +213,18 @@ export const capteursAPI = {
 
   // Polling manuel
   pollNow: () => client.post<PollResult[]>('/govee/poll'),
+
+  // Tapo local
+  getTapoConfig: () => client.get<TapoConfig>('/tapo/config'),
+  updateTapoConfig: (c: TapoConfigUpdate) => client.put<TapoConfig>('/tapo/config', c),
+  testTapoConnection: () => client.post<TapoTestResult>('/tapo/test-connection'),
+  discoverTapoDevices: () => client.get<TapoDiscoveryDevice[]>('/tapo/discover'),
+  getTapoDevices: () => client.get<GoveeDevice[]>('/tapo/devices'),
+  createTapoDevice: (d: TapoDeviceCreate) => client.post<GoveeDevice>('/tapo/devices', d),
+  updateTapoDevice: (id: number, d: TapoDeviceUpdate) =>
+    client.put<GoveeDevice>(`/tapo/devices/${id}`, d),
+  deleteTapoDevice: (id: number) => client.delete(`/tapo/devices/${id}`),
+  pollTapoNow: () => client.post<PollResult[]>('/tapo/poll'),
 
   // Import CSV historique Govee
   importCsv: (id_device: number, file: File) => {

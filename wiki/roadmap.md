@@ -225,6 +225,15 @@ Nouvelle entité `ProjetOpenField` (N mères, pères identifiés ou inconnus, li
 - Poller Govee exclu des capteurs ESPHome (`modele != "esphome"`)
 - Section UI accordéon dans Paramétrage → onglet Capteurs (Govee + ESPHome côte à côte)
 
+### Intégration Tapo H100 ✅ — mergé et déployé 2026-09-13 (PR #5, contribution externe Devilouned)
+- `TapoConfig` (config unique du hub H100 : IP, identifiants chiffrés Fernet, statut) + colonne `GoveeDevice.source` (`govee` | `tapo` | `esphome`)
+- `backend/app/services/tapo_service.py` — lecture locale des T310/T315 via la lib `tapo` (`ApiClient.h100()`), aucun appel cloud
+- `backend/app/routers/tapo.py` — config, test de connexion, découverte, CRUD capteurs, poll manuel
+- Poller APScheduler dédié (5 min), verrou MySQL nommé pour éviter le double-polling multi-workers
+- Section UI accordéon Paramétrage → Capteurs (Govee / Tapo / ESPHome)
+- 7 tests unitaires (`backend/test_tapo_service.py`)
+- Bug connu découvert au déploiement (sans gravité, non corrigé) : [[bugs/tapoconfig-migration-race]]
+
 ### Offset VPD foliaire configurable ✅
 - `AppSettings('vpd_leaf_offset')` — défaut 2.0°C
 - `compute_vpd(temp, hum, leaf_offset)` — utilisé partout (Govee poller, manual poll, ESPHome push, entrée manuelle)

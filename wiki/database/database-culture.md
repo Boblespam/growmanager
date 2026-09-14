@@ -14,7 +14,7 @@ Core entity representing a grow cycle.
 |---|---|---|
 | `id_culture` | PK | |
 | `id_box` | FK → Box | Growing tent used |
-| `id_espace` | FK → EspaceCulture (nullable) | Space if not using Box |
+| `id_espace` | FK → EspaceCulture (nullable) | Space if not using Box — always mirrors the current (open-ended) `CultureEmplacement` row, see [[database/database-spaces]] |
 | `nom` | String | Culture name |
 | `date_debut` | Date | Start date |
 | `statut` | String | `active` \| `sechage_curing` \| `terminee` |

@@ -1,7 +1,7 @@
 // ─── GÉNÉRÉ depuis backend/app/models/all_models.py (SQLAlchemy → dialecte SQLite) ───
 // Ne pas éditer à la main : régénérer si le schéma backend change (voir wiki features/mobile-standalone).
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 4
 
 export const SCHEMA_STATEMENTS: string[] = [
 `CREATE TABLE "AppSettings" (
@@ -550,6 +550,16 @@ export const SCHEMA_STATEMENTS: string[] = [
 	FOREIGN KEY(id_box) REFERENCES "Box" (id_box), 
 	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
 )`,
+`CREATE TABLE "CultureEmplacement" (
+	id_emplacement INTEGER NOT NULL,
+	id_culture INTEGER NOT NULL,
+	id_espace INTEGER NOT NULL,
+	date_debut DATE NOT NULL,
+	date_fin DATE,
+	PRIMARY KEY (id_emplacement),
+	FOREIGN KEY(id_culture) REFERENCES "Culture" (id_culture) ON DELETE CASCADE,
+	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
+)`,
 `CREATE TABLE "EspaceMateriel" (
 	id_espace_materiel INTEGER NOT NULL, 
 	id_espace INTEGER NOT NULL, 
@@ -565,12 +575,25 @@ export const SCHEMA_STATEMENTS: string[] = [
 	nom VARCHAR(200) NOT NULL, 
 	device_id VARCHAR(100), 
 	modele VARCHAR(50), 
+	source VARCHAR(20),
 	ip_lan VARCHAR(50), 
 	id_espace INTEGER, 
 	actif BOOLEAN, 
 	notes TEXT, 
 	PRIMARY KEY (id_device), 
 	FOREIGN KEY(id_espace) REFERENCES "EspaceCulture" (id_espace)
+)`,
+`CREATE TABLE "TapoConfig" (
+	id_config INTEGER NOT NULL,
+	enabled BOOLEAN NOT NULL,
+	hub_ip VARCHAR(50),
+	username VARCHAR(255),
+	password_encrypted TEXT,
+	last_status VARCHAR(50),
+	last_error TEXT,
+	last_poll_at DATETIME,
+	updated_at DATETIME,
+	PRIMARY KEY (id_config)
 )`,
 `CREATE TABLE "Graine" (
 	id_graine INTEGER NOT NULL, 

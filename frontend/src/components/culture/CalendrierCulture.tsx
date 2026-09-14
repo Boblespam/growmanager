@@ -6,6 +6,8 @@ import { ACTION_MAP, CATEGORY_COLORS } from './actionTypes'
 import ActionModal from './ActionModal'
 import ArrosageModal from './ArrosageModal'
 import SensorDayChart from '../SensorDayChart'
+import { CultureEmplacement } from '../../api/cultures'
+import { espaceAtDate } from '../../utils/cultureEmplacement'
 
 // ── Helpers arrosage ───────────────────────────────────────────────────────────
 
@@ -108,6 +110,7 @@ const WATERING_COLORS: Record<string, string> = {
 interface Props {
   cultureId: number
   idEspace?: number
+  emplacements?: CultureEmplacement[]
   plants: Plant[]
 }
 
@@ -123,7 +126,7 @@ function dateStr(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-export default function CalendrierCulture({ cultureId, idEspace, plants }: Props) {
+export default function CalendrierCulture({ cultureId, idEspace, emplacements, plants }: Props) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())    // 0-indexed
@@ -391,7 +394,10 @@ export default function CalendrierCulture({ cultureId, idEspace, plants }: Props
           </div>
 
           {/* Courbes température / humidité / VPD du jour */}
-          <SensorDayChart date={selectedDay} idEspace={idEspace} />
+          <SensorDayChart
+            date={selectedDay}
+            idEspace={espaceAtDate(emplacements, selectedDay, idEspace)}
+          />
 
           {actionsByDay[selectedDay]?.length ? (() => {
             const { wateringGroups, other } = groupWateringActions(actionsByDay[selectedDay])

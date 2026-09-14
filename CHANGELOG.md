@@ -17,6 +17,44 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.4.10] - 2026-09-13
+
+### Ajouté
+- Intégration capteurs Tapo T310/T315 via hub H100 local (configuration, découverte, polling automatique 5 min, historique VPD partagé avec Govee/ESPHome). PR externe #5.
+
+---
+
+## [3.4.9] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.8] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.7] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
+## [3.4.6] - 2026-09-12
+
+### Corrigé
+- CI : le workflow `docker-publish.yml` ne publiait jamais le tag `:latest` sur GHCR (seulement `main` et `sha-xxxxx`), ce qui faisait échouer `update.sh latest` en prod (`manifest unknown`). Ajout de `flavor: latest=true` sur les jobs backend et frontend.
+
+---
+
+## [3.4.5] - 2026-09-12
+
+*(prochaines modifications en cours)*
+
+---
+
 ## [3.4.4] - 2026-07-16
 
 *(prochaines modifications en cours)*

@@ -52,10 +52,21 @@ const DEVICE_COLORS_PDF = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'
 export function buildSensorSVGCharts(dayLogs: TemperatureLog[]): string {
   if (dayLogs.length === 0) return ''
 
+  const sourceLabel = (source?: string): string => {
+    if (source === 'tapo') return 'Tapo'
+    if (source === 'esphome') return 'ESPHome'
+    if (source === 'govee') return 'Govee'
+    return ''
+  }
+
   const deviceMap = new Map<string, string>()
   for (const log of dayLogs) {
     const k = log.id_device != null ? String(log.id_device) : 'all'
-    if (!deviceMap.has(k)) deviceMap.set(k, log.nom_device ?? (log.id_device != null ? `Capteur ${log.id_device}` : 'Capteur'))
+    if (!deviceMap.has(k)) {
+      const name = log.nom_device ?? (log.id_device != null ? `Capteur ${log.id_device}` : 'Capteur')
+      const provider = sourceLabel(log.source)
+      deviceMap.set(k, provider ? `${name} · ${provider}` : name)
+    }
   }
   const devices = [...deviceMap.entries()].map(([key, nom], i) => ({
     key, nom, color: DEVICE_COLORS_PDF[i % DEVICE_COLORS_PDF.length],

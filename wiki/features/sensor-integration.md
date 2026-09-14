@@ -4,7 +4,7 @@ updated: 2026-06-03
 sources: [routers/capteurs.py, routers/esphome.py, schemas/esphome.py, models/all_models.py, routers/app_settings.py]
 ---
 
-# Feature — Sensor Integration (Govee + ESPHome)
+# Feature — Sensor Integration (Govee + Tapo + ESPHome)
 
 ## Overview
 
@@ -45,7 +45,7 @@ Each reading creates a `TemperatureLog`:
   temperature: float,   # °C
   humidite: float,      # % RH
   vpd: float,           # kPa (calculated)
-  source: 'govee' | 'manual'
+  source: 'govee' | 'tapo' | 'esphome' | 'manual'
 }
 ```
 
@@ -155,12 +155,45 @@ interval:
 
 ### UI — Paramétrage (onglet Capteurs)
 
-3 accordéons dans cet ordre :
+4 accordéons dans cet ordre :
 1. 🟣 **Paramètres capteurs** (violet, ouvert par défaut) — offset VPD foliaire
 2. 🟢 **Capteurs Govee** — configuration API cloud + liste des capteurs + import Gmail
-3. 🟠 **Capteurs ESPHome** — enregistrement + gestion des capteurs DIY
+3. 🟣 **Capteurs Tapo** — configuration H100 local + découverte T310/T315
+4. 🟠 **Capteurs ESPHome** — enregistrement + gestion des capteurs DIY
 
 ---
+
+## Intégration Tapo locale (2026-09-01)
+
+Les capteurs Tapo T310/T315 sont lus localement via un hub H100. Les sondes
+étant reliées au H100 par radio, seule l’adresse IP du hub est configurée.
+
+### Configuration
+
+Depuis **Paramétrage > Capteurs > Capteurs Tapo** :
+
+1. saisir l’IP du H100, l’identifiant TP-Link/Tapo et le mot de passe ;
+2. sauvegarder puis tester la connexion ;
+3. découvrir les enfants T310/T315 ;
+4. sélectionner une sonde, lui donner un nom GrowManager et l’associer à un espace ;
+5. activer le polling automatique.
+
+Le mot de passe est chiffré côté backend et n’est jamais retourné au frontend.
+L’application utilise `tapo==0.9.0` et ses appels locaux `ApiClient.h100()` /
+`HubHandler.get_child_device_list()`. Aucun endpoint cloud Tapo n’est appelé.
+
+### Endpoints
+
+- `GET/PUT /api/tapo/config` — configuration H100 sans exposer le mot de passe
+- `POST /api/tapo/test-connection` — test de connexion locale
+- `GET /api/tapo/discover` — découverte des T310/T315 appairés au H100
+- `GET/POST /api/tapo/devices` — liste et enregistrement des sondes
+- `PUT/DELETE /api/tapo/devices/{id}` — gestion d’une sonde enregistrée
+- `POST /api/tapo/poll` — lecture immédiate des sondes Tapo actives
+
+Le polling automatique Tapo est lancé toutes les 5 minutes avec le scheduler
+existant. Chaque lecture est enregistrée dans `TemperatureLog`, avec le VPD
+calculé par la même fonction que Govee et ESPHome.
 
 ## Offset température foliaire VPD (2026-06-03)
 

@@ -33,6 +33,13 @@ type Bucket = { temps: number[]; hums: number[]; vpds: number[] }
 const avgVals = (arr: number[]): number | null =>
   arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null
 
+const sourceLabel = (source?: string): string => {
+  if (source === 'tapo') return 'Tapo'
+  if (source === 'esphome') return 'ESPHome'
+  if (source === 'govee') return 'Govee'
+  return ''
+}
+
 const make24Buckets = (): Map<number, Bucket> =>
   new Map(Array.from({ length: 24 }, (_, h) => [h, { temps: [], hums: [], vpds: [] }]))
 
@@ -73,7 +80,9 @@ export default function SensorDayChart({ date, idEspace }: Props) {
   const deviceMap = new Map<number, string>()
   for (const log of logs) {
     if (log.id_device != null && !deviceMap.has(log.id_device)) {
-      deviceMap.set(log.id_device, log.nom_device ?? `Capteur ${log.id_device}`)
+      const provider = sourceLabel(log.source)
+      const name = log.nom_device ?? `Capteur ${log.id_device}`
+      deviceMap.set(log.id_device, provider ? `${name} · ${provider}` : name)
     }
   }
   const devices = [...deviceMap.entries()].map(([id, nom], i) => ({
