@@ -6,6 +6,19 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-11] Bugfix | Enracinement des boutures (clones et boutures externes)
+
+**Constat de Pik après déploiement de la 3.7.0 :** une bouture ajoutée dans une culture s'affichait « Germination », sans moyen visible de valider l'enracinement (icône 14 px sans texte ; et sur la plante testée, `statut_clone` n'avait pas été enregistré, probablement backend prod pas encore à jour).
+
+### Corrections (validées par Pik)
+- `PlantesTab` : étiquette « Enracinement ✂️ » tant qu'une bouture (`origine` clone ou bouture) est en `germination` et en attente ; bouton texte « Valider l'enracinement » à côté du badge jaune (l'icône de la rangée d'actions est retirée). `statut_clone` absent sur une bouture en germination = considérée en attente.
+- `PATCH /cultures/{id}/plants/{id}/enraciner` (backend + local) : passe le statut en `veg` si la plante était en `germination`.
+- Carte de plante : durée de flo affichée en jours (« j ») au lieu de « sem ».
+- Le statut en base reste `germination` pendant l'enracinement (pas de nouveau statut, pour ne pas toucher aux listes de statuts actifs) : les boutures en attente comptent donc dans les plantes en germination.
+
+### Files modified
+- `backend/app/routers/cultures.py`, `frontend/src/components/culture/PlantesTab.tsx`, `frontend/src/local/handlers/cultures.ts`
+
 ## [2026-10-11] Feature | Retours testeur Android : boutures externes, flo en semaines, doublons, stock
 
 **Contexte :** premiers retours d'un testeur de l'app Android (mode autonome). Tri fait avec Pik :

@@ -2347,6 +2347,9 @@ def enraciner_clone(
     else:
         plant.date_enracinement = date_type.today()
     plant.statut_clone = "enracine"
+    # Une fois enracinée, la bouture passe en végétation
+    if plant.statut in (None, "germination"):
+        plant.statut = "veg"
     db.commit()
     db.refresh(plant)
     return _enrich_plant(plant, db)

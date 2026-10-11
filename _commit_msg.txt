@@ -1,11 +1,10 @@
-feat: boutures externes, floraison en semaines, controle des doublons et breeders dans le stock
+fix: enracinement des boutures (etiquette, bouton Valider l'enracinement, passage en vegetation)
 
-- Type Bouture dans les packs : plantes origine bouture en attente d enracinement
-- Floraison saisissable en jours ou en semaines
-- Breeders et varietes : pas de doublon (casse ignoree)
-- Nouveau stock : varietes triees avec breeder(s)
-- Fix : graine marquee utilisee lors de l ajout d une plante dans une culture existante
-- Fix : duree de flo affichee en sem au lieu de jours
+- Bouture en attente affichee Enracinement au lieu de Germination
+- Bouton texte Valider l'enracinement a cote du badge En attente d'enracinement
+- Bouture externe sans statut_clone consideree en attente
+- Enracinement valide : la plante passe en vegetation (backend + mode local)
+- Duree de flo affichee en jours sur la carte de plante
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01AKwhugsThj7H4tHaUTKQQ7

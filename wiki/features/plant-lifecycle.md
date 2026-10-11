@@ -66,6 +66,8 @@ External plants (bouture/clone) don't require a seed — used for secondary cult
 
 **Boutures externes (2026-10-11)** : des boutures achetées ou reçues s'enregistrent comme un pack, avec le type « Bouture » (`Graine.types_graines = 'Bouture'`). Ajoutées à une culture (création ou « Ajouter une plante »), elles donnent une plante `origine = 'bouture'`, `statut = 'germination'`, `statut_clone = 'en_attente'` : même suivi d'enracinement que les clones maison, avec badge « Bouture externe ». Variété et breeder viennent de la graine du lot. Exclues du taux de germination.
 
+**Enracinement (UI, 2026-10-11)** : tant qu'une bouture (clone maison ou externe) est en attente, sa carte affiche l'étiquette « Enracinement ✂️ » et un bouton « Valider l'enracinement » à côté du badge jaune. Valider l'enracinement passe la plante en `veg`. En base, le statut reste `germination` pendant l'enracinement.
+
 ## Clonage — suivi bouture
 
 Un clone suit un mini-cycle avant de rejoindre le cycle normal :

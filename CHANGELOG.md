@@ -17,6 +17,16 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.7.1] - 2026-10-11
+
+### Corrigé
+- **Boutures non enracinées affichées « Germination »** : elles affichent maintenant l'étiquette « Enracinement ✂️ » (clones maison et boutures externes).
+- **Bouton d'enracinement introuvable** : la petite icône jaune est remplacée par un bouton « Valider l'enracinement » à côté du badge « En attente d'enracinement ». Une bouture externe sans statut d'enracinement enregistré est aussi considérée en attente.
+- **Bouture enracinée restée en « Germination »** : la validation de l'enracinement la passe automatiquement en Végétation (backend + mode local).
+- **Durée de floraison affichée « sem »** sur la carte de plante alors que la valeur est en jours.
+
+---
+
 ## [3.7.0] - 2026-10-11
 
 ### Ajouté

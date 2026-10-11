@@ -495,7 +495,15 @@ function PlantCard({
   })
 
   const statut = plant.statut || 'germination'
-  const colorClass = STATUT_COLORS[statut] || 'bg-gray-100 text-gray-600 dark:text-gray-300'
+  // Bouture (clone maison ou externe) pas encore enracinée : on affiche « Enracinement » au lieu de « Germination »
+  // (statut_clone absent sur une bouture encore en germination = considérée en attente)
+  const estBouture = plant.origine === 'clone' || plant.origine === 'bouture'
+  const enAttenteEnracinement = estBouture && (
+    plant.statut_clone === 'en_attente' || (!plant.statut_clone && statut === 'germination'))
+  const enEnracinement = enAttenteEnracinement && statut === 'germination'
+  const colorClass = enEnracinement
+    ? 'bg-amber-100 text-amber-700'
+    : STATUT_COLORS[statut] || 'bg-gray-100 text-gray-600 dark:text-gray-300'
   const showSolVivant = (editing ? editValues.substrat : plant.substrat) === 'sol_vivant'
   const showPot = ['terre', 'sol_vivant', 'coco'].includes(editing ? editValues.substrat || '' : plant.substrat || '')
 
@@ -604,13 +612,13 @@ function PlantCard({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-gray-900 dark:text-gray-100">{plant.nom_affichage}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
-                {STATUT_LABELS[statut] || statut}
+                {enEnracinement ? 'Enracinement ✂️' : STATUT_LABELS[statut] || statut}
               </span>
             </div>
             {plant.nom_variete && (
               <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
                 {plant.nom_breeder ? `${plant.nom_breeder} — ` : ''}{plant.nom_variete}
-                {plant.duree_flo_min ? ` · Flo: ${plant.duree_flo_min}${plant.duree_flo_max ? `–${plant.duree_flo_max}` : ''}sem` : ''}
+                {plant.duree_flo_min ? ` · Flo: ${plant.duree_flo_min}${plant.duree_flo_max ? `–${plant.duree_flo_max}` : ''} j` : ''}
               </p>
             )}
             <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">
@@ -649,10 +657,18 @@ function PlantCard({
                     ✂️ Bouture de {plant.nom_plant_mere}
                   </span>
                 )}
-                {plant.statut_clone === 'en_attente' && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
-                    ⏳ En attente d'enracinement
-                  </span>
+                {enAttenteEnracinement && (
+                  <>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                      ⏳ En attente d'enracinement
+                    </span>
+                    <button
+                      onClick={() => setShowEnraciner(v => !v)}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-600 text-white hover:bg-green-700"
+                    >
+                      <CheckCircle2 size={11} /> Valider l'enracinement
+                    </button>
+                  </>
                 )}
                 {plant.statut_clone === 'enracine' && plant.date_enracinement && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
@@ -705,15 +721,7 @@ function PlantCard({
                 <button onClick={onClone} className="p-1 text-gray-400 dark:text-gray-500 hover:text-violet-600" title="Prendre une bouture">
                   <Scissors size={14} />
                 </button>
-                {(plant.origine === 'clone' || plant.origine === 'bouture') && plant.statut_clone === 'en_attente' && (
-                  <button
-                    onClick={() => setShowEnraciner(v => !v)}
-                    className="p-1 text-yellow-500 hover:text-green-600"
-                    title="Marquer enraciné / raté"
-                  >
-                    <CheckCircle2 size={14} />
-                  </button>
-                )}
+                
                 <button onClick={onTransfer} className="p-1 text-gray-400 dark:text-gray-500 hover:text-grow-600" title="Déplacer vers une autre culture">
                   <ArrowRightLeft size={14} />
                 </button>
@@ -726,7 +734,7 @@ function PlantCard({
         </div>
       )}
       {/* Panel inline enracinement */}
-        {showEnraciner && plant.statut_clone === 'en_attente' && (
+        {showEnraciner && enAttenteEnracinement && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'enracinement</label>

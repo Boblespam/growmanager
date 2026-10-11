@@ -586,6 +586,9 @@ route('PATCH', '/cultures/:culture_id/plants/:plant_id/enraciner', async ({ para
   const dateEnr = (body as Row)?.date_enracinement ?? todayISO()
   await run('UPDATE "Plant" SET date_enracinement = ?, statut_clone = ? WHERE id_plant = ?',
     [dateEnr, 'enracine', params.plant_id])
+  // Une fois enracinée, la bouture passe en végétation
+  await run(`UPDATE "Plant" SET statut = 'veg' WHERE id_plant = ? AND (statut IS NULL OR statut = 'germination')`,
+    [params.plant_id])
   const updated = await one<Row>('SELECT * FROM "Plant" WHERE id_plant = ?', [params.plant_id])
   return { data: await enrichPlant(updated!) }
 })
