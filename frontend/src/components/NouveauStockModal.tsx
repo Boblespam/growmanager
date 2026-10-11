@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Loader2, Save, Plus } from 'lucide-react'
 import { stockAPI, Stock, BocalDisponible } from '../api/stock'
 import { varieteAPI, Variete } from '../api/varietes'
+import { catalogueAPI, CatalogueItem } from '../api/graines'
 import { useParametreListe } from '../api/parametres'
 import { materielAPI, Materiel } from '../api/materiel'
 import { cultureAPI, PlantForStock, PlantStockInfo } from '../api/cultures'
@@ -48,6 +49,27 @@ export default function NouveauStockModal({ editStock, onClose }: NouveauStockMo
     queryKey: ['varietes'],
     queryFn: async () => (await varieteAPI.getAll()).data,
   })
+
+  // Breeder(s) de chaque variété, déduits des packs de graines (une variété peut exister chez plusieurs breeders)
+  const { data: catalogue = [] } = useQuery<CatalogueItem[]>({
+    queryKey: ['catalogue'],
+    queryFn: async () => (await catalogueAPI.get()).data,
+  })
+  const varietesTriees = useMemo(() => {
+    const breedersParVariete = new Map<number, Set<string>>()
+    for (const item of catalogue) {
+      if (!item.id_variete || !item.breeder_nom || item.breeder_nom === 'Inconnu') continue
+      if (!breedersParVariete.has(item.id_variete)) breedersParVariete.set(item.id_variete, new Set())
+      breedersParVariete.get(item.id_variete)!.add(item.breeder_nom)
+    }
+    return varietes
+      .map(v => {
+        const breeders = [...(breedersParVariete.get(v.id_variete) ?? [])]
+          .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }))
+        return { ...v, label: breeders.length ? `${v.nom_variete} (${breeders.join(', ')})` : v.nom_variete }
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }))
+  }, [varietes, catalogue])
 
   const { data: bocauxDisponibles = [] } = useQuery<BocalDisponible[]>({
     queryKey: ['bocaux-disponibles', editStock?.id_stock],
@@ -194,8 +216,8 @@ export default function NouveauStockModal({ editStock, onClose }: NouveauStockMo
               className={sel}
             >
               <option value="">— Non renseignée —</option>
-              {varietes.map(v => (
-                <option key={v.id_variete} value={v.id_variete}>{v.nom_variete}</option>
+              {varietesTriees.map(v => (
+                <option key={v.id_variete} value={v.id_variete}>{v.label}</option>
               ))}
             </select>
           </div>

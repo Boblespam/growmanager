@@ -214,6 +214,19 @@ export async function enrichCulture(culture: Row): Promise<Row> {
   }
 }
 
+/** Un lot de boutures externes est un pack dont le type est « Bouture ». */
+export function isBouture(graine: Row | null | undefined): boolean {
+  return String(graine?.types_graines ?? '').trim().toLowerCase() === 'bouture'
+}
+
+/** Champs d'origine d'une plante créée depuis le catalogue (miroir de _origine_fields côté backend).
+ *  Bouture externe → origine 'bouture', en attente d'enracinement (comme un clone maison). */
+export function origineFields(graine: Row | null | undefined): { origine: string; statut: string; statut_clone: string | null } {
+  return isBouture(graine)
+    ? { origine: 'bouture', statut: 'germination', statut_clone: 'en_attente' }
+    : { origine: 'graine', statut: 'germination', statut_clone: null }
+}
+
 export async function buildPlantName(idGraine: unknown, numero: number): Promise<string> {
   if (idGraine) {
     const g = await one<Row>(

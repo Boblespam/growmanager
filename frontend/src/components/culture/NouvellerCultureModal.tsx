@@ -226,7 +226,7 @@ export default function NouvellerCultureModal({ onClose, onSubmit, initialData }
               onClick={() => { setMode('interne'); setStep(1) }}
               className={`flex-1 py-2 flex items-center justify-center gap-2 transition-colors
                 ${mode === 'interne' ? 'bg-grow-600 text-white font-medium' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}>
-              <Leaf size={14} /> Culture interne (graines)
+              <Leaf size={14} /> Graines / boutures
             </button>
             <button type="button"
               onClick={() => setMode('externe')}
@@ -375,7 +375,7 @@ export default function NouvellerCultureModal({ onClose, onSubmit, initialData }
                   <button type="button" disabled={!idEspace}
                     onClick={() => setStep(2)}
                     className="flex-1 px-4 py-2 bg-grow-600 text-white rounded-lg hover:bg-grow-700 disabled:opacity-50 text-sm">
-                    Suivant → Choisir les graines
+                    Suivant → Choisir graines / boutures
                   </button>
                 ) : (
                   <button type="button" disabled={!idEspace}
@@ -597,7 +597,7 @@ export default function NouvellerCultureModal({ onClose, onSubmit, initialData }
                         .sort((a, b) => a.variete_nom.localeCompare(b.variete_nom, 'fr', { sensitivity: 'base' }))
                       if (available.length === 0) {
                         return <p className="text-sm text-gray-400 dark:text-gray-500 p-4 text-center">
-                          {searchGraine ? 'Aucune variété trouvée' : 'Aucune graine disponible dans le stock'}
+                          {searchGraine ? 'Aucune variété trouvée' : 'Aucune graine ni bouture disponible dans le stock'}
                         </p>
                       }
                       return available.map(item => (
@@ -607,9 +607,12 @@ export default function NouvellerCultureModal({ onClose, onSubmit, initialData }
                           <div>
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.variete_nom}</span>
                             <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 ml-2">{item.breeder_nom}</span>
+                            {item.type_graines === 'Bouture' && (
+                              <span className="text-xs text-violet-600 ml-2">✂️ Bouture</span>
+                            )}
                             {item.duree_flo_min && (
                               <span className="text-xs text-purple-600 ml-2">
-                                {item.duree_flo_min}{item.duree_flo_max ? `–${item.duree_flo_max}` : ''}sem
+                                flo {item.duree_flo_min}{item.duree_flo_max ? `–${item.duree_flo_max}` : ''} j
                               </span>
                             )}
                           </div>

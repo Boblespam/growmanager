@@ -103,7 +103,8 @@ export default function Graines() {
   }, [catalogue, searchTerm, typeFilter, stockFilter, sortCol, sortDir])
 
   const avgPrix = useMemo(() => {
-    const withPrice = (catalogue || []).filter(i => i.prix_par_graine != null && i.nbr_graines_restantes > 0)
+    // Coût moyen d'une graine : les lots de boutures sont exclus
+    const withPrice = (catalogue || []).filter(i => i.prix_par_graine != null && i.nbr_graines_restantes > 0 && i.type_graines !== 'Bouture')
     if (!withPrice.length) return null
     const sumProduit = withPrice.reduce((sum, i) => sum + i.prix_par_graine! * i.nbr_graines_restantes, 0)
     const sumStock   = withPrice.reduce((sum, i) => sum + i.nbr_graines_restantes, 0)
@@ -142,7 +143,7 @@ export default function Graines() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Catalogue Graines</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Graines &amp; boutures</h1>
           {avgPrix !== null && (
             <div className="flex items-center gap-1 px-3 py-1.5 bg-grow-50 border border-grow-100 rounded-lg">
               <span className="text-xs text-grow-500">Coût moyen</span>
@@ -162,7 +163,7 @@ export default function Graines() {
             <ArrowDownUp size={15} />Import / Export
           </button>
           <button onClick={() => setShowNouveauModal(true)} className="flex items-center gap-2 px-4 py-2 bg-grow-600 text-white rounded-lg hover:bg-grow-700 text-sm font-medium">
-            <Plus size={18} />Nouveau Pack
+            <Plus size={18} />Nouveau pack / lot
           </button>
         </div>
       </div>
@@ -186,6 +187,7 @@ export default function Graines() {
             <option value="Régulière">Régulière</option>
             <option value="Féminisée">Féminisée</option>
             <option value="Auto">Auto</option>
+            <option value="Bouture">Bouture</option>
           </select>
           <select value={stockFilter} onChange={e => setStockFilter(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600">
             <option value="">Tous les stocks</option>

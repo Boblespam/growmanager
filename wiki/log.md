@@ -6,6 +6,31 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-11] Feature | Retours testeur Android : boutures externes, flo en semaines, doublons, stock
+
+**Contexte :** premiers retours d'un testeur de l'app Android (mode autonome). Tri fait avec Pik :
+- Taux THC / CBD / THC-V sur les graines : **refusé** (on ne connaît pas le taux avant d'avoir cultivé, à mettre en notes ; les taux labo existent déjà dans la notation des variétés).
+- Numérotation « Variété #N » par rang dans le pack : **voulu**, pas un bug.
+- Dates clés (12/12, début flo) sans effet sur le calendrier ni le statut floraison : **comportement conservé**, Pik explique au testeur d'utiliser l'action « Début floraison ».
+- Création différée breeder / variété à l'enregistrement du pack : **refusé**, seul le contrôle des doublons est retenu.
+
+### Réalisé (validé par Pik)
+- **Boutures externes** : un lot de boutures = un `PackGraine` dont les `Graine` ont `types_graines = 'Bouture'` (aucune migration de schéma). Variété, breeder, durée de flo, prévision de récolte, stats et origine du stock fonctionnent donc comme pour une graine. Helpers `_is_bouture` / `_origine_fields` (backend `cultures.py`) et `isBouture` / `origineFields` (`local/handlers/cultures-helpers.ts`) : création de culture et `POST /cultures/{id}/plants` forcent `origine = 'bouture'`, `statut = 'germination'`, `statut_clone = 'en_attente'`. Endpoints `enraciner` / `clone-rate` acceptent `clone` et `bouture`. UI : type « Bouture (clone) » et libellés adaptés dans `NouveauPackModal`, badge ✂️ dans les sélecteurs, badge « Bouture externe » + bouton enracinement dans `PlantesTab`, page Graines renommée « Graines & boutures » avec filtre Bouture.
+- **Floraison jours / semaines** dans `NouveauPackModal` (stockage en jours).
+- **Doublons** : `POST /breeders` et `POST /varietes` renvoient l'existant si le nom existe (casse et espaces ignorés), backend + local.
+- **Nouveau stock** : variétés triées, libellé « Variété (Breeder1, Breeder2) » déduit du catalogue.
+- **Bugfix** : `POST /cultures/{id}/plants` avec `id_graine` marque maintenant la graine `utilisee` (backend + local).
+- **Bugfix** : durée de flo affichée « sem » au lieu de « j » dans les sélecteurs de graines.
+
+### Files modified
+- `backend/app/routers/cultures.py`, `breeders.py`, `varietes.py`
+- `frontend/src/components/NouveauPackModal.tsx`, `NouveauStockModal.tsx`, `culture/NouvellerCultureModal.tsx`, `culture/PlantesTab.tsx`, `pages/Graines.tsx`
+- `frontend/src/local/handlers/cultures.ts`, `cultures-helpers.ts`, `referentiels.ts`
+
+### À faire
+- Les doublons déjà présents en base (ex. « Green gelato » / « Green Gelato ») ne sont pas fusionnés automatiquement.
+- L'icône ✂️ « Prendre une bouture » est peu visible d'après le retour testeur.
+
 ## [2026-10-02] Feature | Refonte complète du Classement des variétés
 
 **Demande de Pik :** un classement de toutes les variétés produites, avec remontée automatique des rendements de culture par pied selon la taille du pot (hydro compté à part), des rendements rosin et hash cumulés, du taux de germination des graines, plus 4 notes manuelles sur 5 étoiles (goût, odeur, texture, facilité d'extraction). Les anciennes notations /100 sont supprimées.

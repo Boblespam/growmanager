@@ -1,5 +1,6 @@
 """Routers pour Breeder - CRUD complet"""
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Breeder, Graine
@@ -25,9 +26,13 @@ def get_breeder(breeder_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=BreederRead)
 def create_breeder(breeder: BreederCreate, db: Session = Depends(get_db)):
-    """Crée un nouveau breeder"""
+    """Crée un nouveau breeder (ou renvoie l'existant si le nom existe déjà, casse ignorée)"""
+    nom = (breeder.nom_breeder or "").strip()
+    existant = db.query(Breeder).filter(func.lower(func.trim(Breeder.nom_breeder)) == nom.lower()).first()
+    if existant:
+        return existant
     db_breeder = Breeder(
-        nom_breeder=breeder.nom_breeder,
+        nom_breeder=nom,
         origine_breeder=breeder.origine_breeder,
         information_breeder=breeder.information_breeder,
     )

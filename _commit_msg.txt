@@ -1,1 +1,11 @@
-fix(mobile): creation du schema local en mode autonome (separateurs SQL manquants)
+feat: boutures externes, floraison en semaines, controle des doublons et breeders dans le stock
+
+- Type Bouture dans les packs : plantes origine bouture en attente d enracinement
+- Floraison saisissable en jours ou en semaines
+- Breeders et varietes : pas de doublon (casse ignoree)
+- Nouveau stock : varietes triees avec breeder(s)
+- Fix : graine marquee utilisee lors de l ajout d une plante dans une culture existante
+- Fix : duree de flo affichee en sem au lieu de jours
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AKwhugsThj7H4tHaUTKQQ7

@@ -86,11 +86,12 @@ export default function PlantesTab({ cultureId, plants }: Props) {
       // Récupère les graines de ce pack et prend la première disponible
       const res = await packCompletAPI.getGraines(pack.id_packgraine)
       const available = res.data.filter(g => !g.utilisee)
-      if (available.length === 0) throw new Error('Plus de graines disponibles')
+      if (available.length === 0) throw new Error(pack.type_graines === 'Bouture' ? 'Plus de boutures disponibles' : 'Plus de graines disponibles')
       const graine = available[0]
       return plantAPI.add(cultureId, {
         nom_affichage: pack.variete_nom,
-        origine: 'graine',
+        // Le serveur (ou le mode local) force origine 'bouture' + enracinement si le pack est un lot de boutures
+        origine: pack.type_graines === 'Bouture' ? 'bouture' : 'graine',
         statut: 'germination',
         numero_plant: plants.length + 1,
         id_graine: graine.id_graine,
@@ -431,7 +432,8 @@ function SeedList({
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {pack.breeder_nom}
-                {pack.duree_flo_min ? ` · ${pack.duree_flo_min}${pack.duree_flo_max ? `–${pack.duree_flo_max}` : ''} sem` : ''}
+                {pack.type_graines === 'Bouture' ? ' · ✂️ Bouture' : ''}
+                {pack.duree_flo_min ? ` · flo ${pack.duree_flo_min}${pack.duree_flo_max ? `–${pack.duree_flo_max}` : ''} j` : ''}
               </span>
             </div>
             <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${
@@ -439,7 +441,7 @@ function SeedList({
                 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                 : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
             }`}>
-              {pack.nbr_graines_restantes} graine{pack.nbr_graines_restantes > 1 ? 's' : ''}
+              {pack.nbr_graines_restantes} {pack.type_graines === 'Bouture' ? 'bouture' : 'graine'}{pack.nbr_graines_restantes > 1 ? 's' : ''}
             </span>
             <button
               onClick={() => onAdd(pack)}
@@ -634,9 +636,14 @@ function PlantCard({
                 <span className="font-semibold text-green-700">⚖️ {plant.poids_recolte_g}g</span>
               )}
             </div>
-            {/* Badge clone : origine */}
-            {plant.origine === 'clone' && (
+            {/* Badge clone / bouture externe : origine + enracinement */}
+            {(plant.origine === 'clone' || plant.origine === 'bouture') && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {plant.origine === 'bouture' && (
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                    ✂️ Bouture externe
+                  </span>
+                )}
                 {plant.nom_plant_mere && (
                   <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
                     ✂️ Bouture de {plant.nom_plant_mere}
@@ -698,7 +705,7 @@ function PlantCard({
                 <button onClick={onClone} className="p-1 text-gray-400 dark:text-gray-500 hover:text-violet-600" title="Prendre une bouture">
                   <Scissors size={14} />
                 </button>
-                {plant.origine === 'clone' && plant.statut_clone === 'en_attente' && (
+                {(plant.origine === 'clone' || plant.origine === 'bouture') && plant.statut_clone === 'en_attente' && (
                   <button
                     onClick={() => setShowEnraciner(v => !v)}
                     className="p-1 text-yellow-500 hover:text-green-600"

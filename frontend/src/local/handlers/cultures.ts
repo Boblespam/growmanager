@@ -5,6 +5,7 @@
 import { route, LocalHttpError } from '../router'
 import { query, one, oneOr404, insert, updateById, run, jsonify } from '../helpers'
 import {
+  isBouture, origineFields,
   Row, enrichCulture, enrichPlant, enrichAction, buildPlantName,
   maybeArchiveCulture, computeCultureCost, computeHarvestDate, handleActionEffects,
   todayISO, toSmallUnit, prixParPetiteUnite,
@@ -243,8 +244,7 @@ route('POST', '/cultures', async ({ body }) => {
         id_graine: graine.id_graine,
         nom_affichage: nomPlant,
         numero_plant: plantCounter,
-        origine: 'graine',
-        statut: 'germination',
+        ...origineFields(graine),
         substrat: payload.substrat_defaut ?? null,
         id_recette_sol: payload.id_recette_sol_defaut ?? null,
         id_pot: sel.id_pot ?? payload.id_pot_defaut ?? null,
@@ -383,16 +383,26 @@ route('POST', '/cultures/:id/plants', async ({ params, body }) => {
   await loadCulture(params.id)
   const p = body as Row
   let nomAffichage = p.nom_affichage
-  if (p.id_graine) {
+  let origine = p.origine ?? null
+  let statut = p.statut ?? null
+  let statutClone: unknown = null
+  const graine = p.id_graine
+    ? await one<Row>('SELECT * FROM "Graine" WHERE id_graine = ?', [p.id_graine]) : null
+  if (graine) {
     nomAffichage = await buildPlantName(p.id_graine, Number(p.numero_plant ?? 1))
+    if (isBouture(graine)) {
+      const f = origineFields(graine)
+      origine = f.origine; statut = f.statut; statutClone = f.statut_clone
+    }
   }
   const idPlant = await insert('Plant', {
     id_culture: Number(params.id),
     id_graine: p.id_graine ?? null,
     nom_affichage: nomAffichage,
     numero_plant: p.numero_plant ?? null,
-    origine: p.origine ?? null,
-    statut: p.statut ?? null,
+    origine,
+    statut,
+    statut_clone: statutClone,
     date_germination: p.date_germination ?? null,
     date_debut_flo: p.date_debut_flo ?? null,
     date_recolte: p.date_recolte ?? null,
@@ -400,6 +410,8 @@ route('POST', '/cultures/:id/plants', async ({ params, body }) => {
     poids_recolte_g: p.poids_recolte_g ?? null,
     notes: p.notes ?? null,
   })
+  // La graine / bouture est consommée
+  if (graine) await run('UPDATE "Graine" SET utilisee = 1 WHERE id_graine = ?', [graine.id_graine])
   const plant = await one<Row>('SELECT * FROM "Plant" WHERE id_plant = ?', [idPlant])
   return { status: 201, data: await enrichPlant(plant!) }
 })
@@ -570,7 +582,7 @@ route('POST', '/cultures/:culture_id/plants/:plant_id/clone', async ({ params, b
 
 route('PATCH', '/cultures/:culture_id/plants/:plant_id/enraciner', async ({ params, body }) => {
   const plant = await loadPlant(params.culture_id, params.plant_id)
-  if (plant.origine !== 'clone') throw new LocalHttpError(400, "Ce plant n'est pas un clone")
+  if (plant.origine !== 'clone' && plant.origine !== 'bouture') throw new LocalHttpError(400, "Ce plant n'est pas une bouture")
   const dateEnr = (body as Row)?.date_enracinement ?? todayISO()
   await run('UPDATE "Plant" SET date_enracinement = ?, statut_clone = ? WHERE id_plant = ?',
     [dateEnr, 'enracine', params.plant_id])
@@ -580,7 +592,7 @@ route('PATCH', '/cultures/:culture_id/plants/:plant_id/enraciner', async ({ para
 
 route('PATCH', '/cultures/:culture_id/plants/:plant_id/clone-rate', async ({ params }) => {
   const plant = await loadPlant(params.culture_id, params.plant_id)
-  if (plant.origine !== 'clone') throw new LocalHttpError(400, "Ce plant n'est pas un clone")
+  if (plant.origine !== 'clone' && plant.origine !== 'bouture') throw new LocalHttpError(400, "Ce plant n'est pas une bouture")
   await run('UPDATE "Plant" SET statut_clone = ?, statut = ? WHERE id_plant = ?',
     ['rate', 'abandonne', params.plant_id])
   const updated = await one<Row>('SELECT * FROM "Plant" WHERE id_plant = ?', [params.plant_id])

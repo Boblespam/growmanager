@@ -1,5 +1,6 @@
 """Routers pour Variete - CRUD complet"""
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
@@ -28,9 +29,13 @@ def get_variete(variete_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=VarieteRead)
 def create_variete(variete: VarieteCreate, db: Session = Depends(get_db)):
-    """Crée une nouvelle variété"""
+    """Crée une nouvelle variété (ou renvoie l'existante si le nom existe déjà, casse ignorée)"""
+    nom = (variete.nom_variete or "").strip()
+    existante = db.query(Variete).filter(func.lower(func.trim(Variete.nom_variete)) == nom.lower()).first()
+    if existante:
+        return existante
     db_variete = Variete(
-        nom_variete=variete.nom_variete,
+        nom_variete=nom,
         croisement_variete=variete.croisement_variete,
         informations_variete=variete.informations_variete,
         lien_web=variete.lien_web,

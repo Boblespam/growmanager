@@ -13,8 +13,12 @@ route('GET', '/breeders/:id', async ({ params }) => ({
 
 route('POST', '/breeders', async ({ body }) => {
   const b = body as Record<string, unknown>
+  // Contrôle des doublons : nom identique (casse et espaces ignorés) → on renvoie l'existant
+  const nom = String(b.nom_breeder ?? '').trim()
+  const existant = await one('SELECT * FROM "Breeder" WHERE lower(trim(nom_breeder)) = lower(?)', [nom])
+  if (existant) return { data: existant }
   const id = await insert('Breeder', {
-    nom_breeder: b.nom_breeder,
+    nom_breeder: nom,
     origine_breeder: b.origine_breeder ?? null,
     information_breeder: b.information_breeder ?? null,
   })
@@ -85,8 +89,12 @@ route('GET', '/varietes/:id', async ({ params }) => ({
 
 route('POST', '/varietes', async ({ body }) => {
   const b = body as Record<string, unknown>
+  // Contrôle des doublons : nom identique (casse et espaces ignorés) → on renvoie l'existante
+  const nom = String(b.nom_variete ?? '').trim()
+  const existante = await one('SELECT * FROM "Variete" WHERE lower(trim(nom_variete)) = lower(?)', [nom])
+  if (existante) return { data: existante }
   const id = await insert('Variete', {
-    nom_variete: b.nom_variete,
+    nom_variete: nom,
     croisement_variete: b.croisement_variete ?? null,
     informations_variete: b.informations_variete ?? null,
     lien_web: b.lien_web ?? null,

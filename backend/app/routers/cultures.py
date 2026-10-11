@@ -247,6 +247,19 @@ def _enrich_culture(culture: Culture, db: Session) -> dict:
     }
 
 
+def _is_bouture(graine: Optional[Graine]) -> bool:
+    """Un lot de boutures externes est un pack dont le type est « Bouture »."""
+    return bool(graine and (graine.types_graines or "").strip().lower() == "bouture")
+
+
+def _origine_fields(graine: Optional[Graine]) -> dict:
+    """Champs d'origine d'une plante créée depuis une graine ou une bouture du catalogue.
+    Bouture externe → origine 'bouture', en attente d'enracinement (comme un clone maison)."""
+    if _is_bouture(graine):
+        return {"origine": "bouture", "statut": "germination", "statut_clone": "en_attente"}
+    return {"origine": "graine", "statut": "germination"}
+
+
 def _build_plant_name(graine: Optional[Graine], numero: int, db: Session = None) -> str:
     if graine and graine.variete:
         rank = numero  # fallback
@@ -1858,8 +1871,7 @@ def create_culture(payload: CultureCreate, db: Session = Depends(get_db)):
                     id_graine=graine.id_graine,
                     nom_affichage=nom_plant,
                     numero_plant=plant_counter,
-                    origine="graine",
-                    statut="germination",
+                    **_origine_fields(graine),
                     substrat=payload.substrat_defaut,
                     id_recette_sol=payload.id_recette_sol_defaut,
                     id_pot=sel.id_pot if sel.id_pot is not None else payload.id_pot_defaut,
@@ -2057,18 +2069,24 @@ def add_plant(culture_id: int, payload: PlantCreate, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Culture non trouvée")
     # Si une graine est liée, recalcule le nom avec le rang dans le paquet
     nom_affichage = payload.nom_affichage
+    origine, statut, statut_clone = payload.origine, payload.statut, None
+    graine = None
     if payload.id_graine:
         graine = db.query(Graine).filter(Graine.id_graine == payload.id_graine).first()
         if graine:
             nom_affichage = _build_plant_name(graine, payload.numero_plant or 1, db)
+            if _is_bouture(graine):
+                f = _origine_fields(graine)
+                origine, statut, statut_clone = f["origine"], f["statut"], f["statut_clone"]
 
     plant = Plant(
         id_culture=culture_id,
         id_graine=payload.id_graine,
         nom_affichage=nom_affichage,
         numero_plant=payload.numero_plant,
-        origine=payload.origine,
-        statut=payload.statut,
+        origine=origine,
+        statut=statut,
+        statut_clone=statut_clone,
         date_germination=payload.date_germination,
         date_debut_flo=payload.date_debut_flo,
         date_recolte=payload.date_recolte,
@@ -2077,6 +2095,8 @@ def add_plant(culture_id: int, payload: PlantCreate, db: Session = Depends(get_d
         notes=payload.notes,
     )
     db.add(plant)
+    if graine:
+        graine.utilisee = True   # la graine / bouture est consommée
     db.commit()
     db.refresh(plant)
     return _enrich_plant(plant, db)
@@ -2317,8 +2337,8 @@ def enraciner_clone(
     plant = db.query(Plant).filter(Plant.id_plant == plant_id, Plant.id_culture == culture_id).first()
     if not plant:
         raise HTTPException(status_code=404, detail="Plant non trouve")
-    if plant.origine != "clone":
-        raise HTTPException(status_code=400, detail="Ce plant n'est pas un clone")
+    if plant.origine not in ("clone", "bouture"):
+        raise HTTPException(status_code=400, detail="Ce plant n'est pas une bouture")
 
     from datetime import date as date_type, datetime as datetime_type
     date_enr = payload.get("date_enracinement")
@@ -2342,8 +2362,8 @@ def rater_clone(
     plant = db.query(Plant).filter(Plant.id_plant == plant_id, Plant.id_culture == culture_id).first()
     if not plant:
         raise HTTPException(status_code=404, detail="Plant non trouve")
-    if plant.origine != "clone":
-        raise HTTPException(status_code=400, detail="Ce plant n'est pas un clone")
+    if plant.origine not in ("clone", "bouture"):
+        raise HTTPException(status_code=400, detail="Ce plant n'est pas une bouture")
 
     plant.statut_clone = "rate"
     plant.statut = "abandonne"

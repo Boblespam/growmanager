@@ -44,6 +44,30 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
   const [showNewVariete, setShowNewVariete]       = useState(false)
   const [showNewFournisseur, setShowNewFournisseur] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Unité de saisie de la floraison (stockage toujours en jours)
+  const [uniteFlo, setUniteFlo] = useState<'jours' | 'semaines'>('jours')
+
+  const changerUniteFlo = (unite: 'jours' | 'semaines') => {
+    if (unite === uniteFlo) return
+    const conv = (v: string) => {
+      if (!v) return v
+      const n = Number(v)
+      if (!Number.isFinite(n)) return v
+      return unite === 'semaines'
+        ? String(Math.round((n / 7) * 10) / 10)   // jours → semaines (1 décimale)
+        : String(Math.round(n * 7))               // semaines → jours
+    }
+    setForm(f => ({ ...f, duree_flo_min: conv(f.duree_flo_min), duree_flo_max: conv(f.duree_flo_max) }))
+    setUniteFlo(unite)
+  }
+
+  /** Convertit la saisie (jours ou semaines) en jours entiers pour l'API */
+  const floEnJours = (v: string): number | undefined => {
+    if (!v) return undefined
+    const n = Number(v)
+    if (!Number.isFinite(n) || n <= 0) return undefined
+    return uniteFlo === 'semaines' ? Math.round(n * 7) : Math.round(n)
+  }
 
   const { data: breeders = [] }     = useQuery<Breeder[]>({ queryKey: ['breeders'],     queryFn: async () => (await client.get<Breeder[]>('/breeders/')).data })
   const { data: varietes = [] }     = useQuery<Variete[]>({ queryKey: ['varietes'],     queryFn: async () => (await client.get<Variete[]>('/varietes/')).data })
@@ -59,7 +83,9 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
   const addBreeder = useMutation({
     mutationFn: (nom: string) => client.post<Breeder>('/breeders/', { nom_breeder: nom }),
     onSuccess: (res) => {
-      queryClient.setQueryData<Breeder[]>(['breeders'], (old = []) => [...old, res.data])
+      // Le backend renvoie l'existant si le nom existe déjà : pas de doublon dans le cache
+      queryClient.setQueryData<Breeder[]>(['breeders'], (old = []) =>
+        old.some(b => b.id_breeder === res.data.id_breeder) ? old : [...old, res.data])
       setForm(f => ({ ...f, id_breeder: res.data.id_breeder }))
       setNewBreederName(''); setShowNewBreeder(false)
     },
@@ -68,8 +94,9 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
     mutationFn: (nom: string) => client.post<Variete>('/varietes/', { nom_variete: nom }),
     onSuccess: (res) => {
       // Mise à jour immédiate du cache pour éviter le flash "— Sélectionner —"
-      queryClient.setQueryData<Variete[]>(['varietes'], (old = []) => [...old, res.data])
-      setForm(f => ({ ...f, id_variete: res.data.id_variete, croisement_variete: '' }))
+      queryClient.setQueryData<Variete[]>(['varietes'], (old = []) =>
+        old.some(v => v.id_variete === res.data.id_variete) ? old : [...old, res.data])
+      setForm(f => ({ ...f, id_variete: res.data.id_variete, croisement_variete: res.data.croisement_variete ?? '' }))
       setNewVarieteName(''); setShowNewVariete(false)
     },
   })
@@ -87,7 +114,8 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['catalogue'] })
       queryClient.invalidateQueries({ queryKey: ['varietes'] })
-      setSuccessMsg(`Pack créé ! ${res.data.nbr_graines_crees} graine${res.data.nbr_graines_crees > 1 ? 's' : ''} ajoutée${res.data.nbr_graines_crees > 1 ? 's' : ''} — ${res.data.breeder_nom} · ${res.data.variete_nom}`)
+      const u = form.types_graines === 'Bouture' ? 'bouture' : 'graine'
+      setSuccessMsg(`${u === 'bouture' ? 'Lot créé' : 'Pack créé'} ! ${res.data.nbr_graines_crees} ${u}${res.data.nbr_graines_crees > 1 ? 's' : ''} ajoutée${res.data.nbr_graines_crees > 1 ? 's' : ''} — ${res.data.breeder_nom} · ${res.data.variete_nom}`)
       setStep('success')
     },
   })
@@ -105,6 +133,9 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
   })
 
   const isPending = createPack.isPending || updatePack.isPending
+  // Lot de boutures externes : même formulaire, libellés adaptés
+  const isBouture = form.types_graines === 'Bouture'
+  const unite = isBouture ? 'bouture' : 'graine'
   const isError   = createPack.isError   || updatePack.isError
 
   const validate = () => {
@@ -127,8 +158,8 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
     date_achat:         form.date_achat || undefined,
     croisement_variete: form.croisement_variete || undefined,
     types_graines:      form.types_graines || undefined,
-    duree_flo_min:      form.duree_flo_min ? Number(form.duree_flo_min) : undefined,
-    duree_flo_max:      form.duree_flo_max ? Number(form.duree_flo_max) : undefined,
+    duree_flo_min:      floEnJours(form.duree_flo_min),
+    duree_flo_max:      floEnJours(form.duree_flo_max),
     edition_limite:     form.edition_limite,
   })
 
@@ -174,7 +205,7 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {isEdit ? `Modifier — ${editPack!.variete_nom}` : 'Nouveau pack de graines'}
+            {isEdit ? `Modifier — ${editPack!.variete_nom}` : isBouture ? 'Nouveau lot de boutures' : 'Nouveau pack de graines'}
           </h2>
           <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300"><X size={22} /></button>
         </div>
@@ -252,15 +283,35 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
                 <option value="Féminisée">Féminisée</option>
                 <option value="Régulière">Régulière</option>
                 <option value="Auto">Auto</option>
+                <option value="Bouture">Bouture (clone)</option>
               </select>
             </div>
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Floraison (jours)</label>
-              <div className="flex gap-1 items-center">
-                <input type="number" placeholder="Min" min={1} value={form.duree_flo_min} onChange={e => setForm(f => ({ ...f, duree_flo_min: e.target.value }))} className={`w-full px-2 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 ${errors.duree_flo ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`} />
-                <span className="text-gray-400 dark:text-gray-500 text-xs shrink-0">→</span>
-                <input type="number" placeholder="Max" min={1} value={form.duree_flo_max} onChange={e => setForm(f => ({ ...f, duree_flo_max: e.target.value }))} className={`w-full px-2 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 ${errors.duree_flo ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`} />
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Floraison</label>
+                <div className="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden text-xs">
+                  {(['jours', 'semaines'] as const).map(u => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => changerUniteFlo(u)}
+                      className={`px-2 py-0.5 ${uniteFlo === u ? 'bg-grow-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+                    >
+                      {u === 'jours' ? 'Jours' : 'Sem.'}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <div className="flex gap-1 items-center">
+                <input type="number" placeholder="Min" min={1} step={uniteFlo === 'semaines' ? 0.5 : 1} value={form.duree_flo_min} onChange={e => setForm(f => ({ ...f, duree_flo_min: e.target.value }))} className={`w-full px-2 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 ${errors.duree_flo ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`} />
+                <span className="text-gray-400 dark:text-gray-500 text-xs shrink-0">→</span>
+                <input type="number" placeholder="Max" min={1} step={uniteFlo === 'semaines' ? 0.5 : 1} value={form.duree_flo_max} onChange={e => setForm(f => ({ ...f, duree_flo_max: e.target.value }))} className={`w-full px-2 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-grow-600 ${errors.duree_flo ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`} />
+              </div>
+              {uniteFlo === 'semaines' && (form.duree_flo_min || form.duree_flo_max) && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  = {floEnJours(form.duree_flo_min) ?? '?'} → {floEnJours(form.duree_flo_max) ?? '?'} jours
+                </p>
+              )}
               {errors.duree_flo && <p className="text-xs text-red-500">{errors.duree_flo}</p>}
             </div>
           </div>
@@ -269,7 +320,7 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                Nb graines {!isEdit && <span className="text-red-500">*</span>}
+                Nb {unite}s {!isEdit && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="number" min={1} max={500}
@@ -296,7 +347,7 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
               {errors.nbr_graines && <p className="text-xs text-red-500">{errors.nbr_graines}</p>}
             </div>
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Prix du pack (€)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Prix {isBouture ? 'du lot' : 'du pack'} (€)</label>
               <input type="number" step="0.01" min={0} placeholder="0.00" value={form.prix_achat} onChange={e => setForm(f => ({ ...f, prix_achat: e.target.value }))} className={ic()} />
             </div>
           </div>
@@ -338,7 +389,7 @@ export default function NouveauPackModal({ onClose, editPack }: NouveauPackModal
           {/* Résumé prix par graine */}
           {form.prix_achat && form.nbr_graines > 0 && (
             <div className="bg-grow-50 rounded-lg px-4 py-3 text-sm text-grow-700">
-              Prix par graine : <span className="font-semibold">{(Number(form.prix_achat) / form.nbr_graines).toFixed(2)} €</span>
+              Prix par {unite} : <span className="font-semibold">{(Number(form.prix_achat) / form.nbr_graines).toFixed(2)} €</span>
             </div>
           )}
 

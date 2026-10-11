@@ -193,6 +193,21 @@ Nouvelle catégorie `photo` (rose, 📷) dans `actionTypes.ts`. `ActionModal.tsx
 
 ---
 
+## Réalisé — Session 2026-10-11 (retours testeur Android)
+
+### Boutures externes (type « Bouture » dans les packs) ✅ DONE — validé 2026-10-11
+### Floraison en jours ou semaines dans le pack ✅ DONE — validé 2026-10-11
+### Contrôle des doublons breeders / variétés ✅ DONE — validé 2026-10-11
+### Nouveau stock : variétés triées avec breeder(s) ✅ DONE — validé 2026-10-11
+
+Voir [[log]] (2026-10-11). Écartés : taux THC/CBD sur les graines, création différée breeder/variété, effets des Dates clés sur le calendrier.
+
+Pistes ouvertes :
+- Fusion des doublons de variétés déjà en base
+- Rendre l'icône ✂️ de clonage plus visible
+
+---
+
 ## Réalisé — Session 2026-10-02
 
 ### Refonte Classement des variétés ✅ — validé 2026-10-02

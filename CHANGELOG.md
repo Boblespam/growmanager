@@ -17,6 +17,20 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.7.0] - 2026-10-11
+
+### Ajouté
+- **Boutures externes** : nouveau type « Bouture (clone) » dans le formulaire de pack (page Graines & boutures). Le lot se choisit ensuite comme une graine, à la création d'une culture ou via « Ajouter une plante » dans une culture existante. La plante est créée avec l'origine `bouture`, en attente d'enracinement (même suivi enraciné / raté que les clones maison). Exclue du taux de germination et du coût moyen par graine. Filtre « Bouture » sur la page Graines.
+- **Floraison en jours ou en semaines** dans le formulaire de pack (stockage toujours en jours, conversion affichée).
+- **Fenêtre Nouveau stock** : la liste des variétés est triée et affiche le ou les breeders (déduits des packs).
+
+### Corrigé
+- **Doublons breeders / variétés** : la création d'un nom déjà existant (casse et espaces ignorés) renvoie l'existant au lieu de créer un doublon (backend + mode local).
+- **Ajout d'une plante depuis un pack dans une culture existante** : la graine n'était pas marquée comme utilisée et restait disponible dans le stock.
+- **Durée de floraison affichée en « sem »** alors que la valeur est en jours (sélecteurs de graines de la nouvelle culture et de l'onglet Plantes).
+
+---
+
 ## [3.6.6] - 2026-10-07
 
 *(prochaines modifications en cours)*

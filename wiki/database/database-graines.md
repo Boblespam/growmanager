@@ -8,7 +8,7 @@ sources: [models/all_models.py, routers/graines.py, routers/breeders.py, routers
 
 ## Breeder
 
-Seed producer/brand.
+Seed producer/brand. `POST /breeders` renvoie l'existant si le nom existe déjà (casse et espaces ignorés) ; idem pour `POST /varietes`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -66,7 +66,7 @@ Individual seed (one per plant that will ever be germinated).
 | `id_packgraine` | FK → PackGraine (nullable) | |
 | `duree_flo_min` | Int (nullable) | Min flowering days |
 | `duree_flo_max` | Int (nullable) | Max flowering days |
-| `types_graines` | String | `Regular` \| `Féminisée` \| `Auto` |
+| `types_graines` | String | `Régulière` \| `Féminisée` \| `Auto` \| `Bouture` (lot de boutures externes, voir [[features/plant-lifecycle]]) |
 | `prix_achat` | Float (nullable) | Per-seed price |
 | `edition_limite` | Boolean | Limited edition flag |
 | `date_achat` | Date (nullable) | |
