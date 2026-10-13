@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Plus, Trash2, Loader2, Thermometer, Battery, Zap, Package } from 'lucide-react'
 import { vaporisateurAPI } from '../api/vaporisateur'
 import type { Vaporisateur, VaporisateurCreate, VapoConsommable, VapoConsommableCreate } from '../api/vaporisateur'
-import { useParametreListeWithAdd } from '../api/parametres'
+import { useParametreListeWithAdd, trierValeurs } from '../api/parametres'
 import SelectWithAdd from './SelectWithAdd'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -395,7 +395,7 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
             <section>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Compatibilités</h3>
               <div className="flex flex-wrap gap-2">
-                {[...new Set([...compatibilites.values.map(compatVal), ...compatSet])].filter(Boolean).map(label => (
+                {trierValeurs([...new Set([...compatibilites.values.map(compatVal), ...compatSet])].filter(Boolean)).map(label => (
                   <button key={label} type="button"
                     onClick={() => toggleCompat(label)}
                     className={`px-3 py-1.5 text-sm rounded-full border font-medium transition-colors ${

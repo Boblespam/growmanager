@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.9.0] - 2026-10-13
+
+### Modifié
+- **Toutes les listes paramétrables triées par ordre alphabétique** (listes déroulantes de l'application et écran Paramétrage, serveur et mode local) : tri français insensible à la casse et aux accents, nombres dans l'ordre naturel (15µ avant 110µ). Les listes à ordre logique (périodes de recette, états du matériel) suivent aussi le tri alphabétique, choix validé.
+
+---
+
 ## [3.8.1] - 2026-10-13
 
 ### Corrigé

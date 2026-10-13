@@ -20,9 +20,18 @@ export interface ParametreValeur {
   ordre:        number
 }
 
+// Tri alphabétique français : insensible à la casse et aux accents, nombres dans l'ordre
+// naturel (« 15µ » avant « 110µ »). Appliqué à toutes les listes paramétrables.
+const collator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true })
+export const compareValeurs = (a: string, b: string) => collator.compare(a, b)
+export const trierValeurs = (valeurs: string[]) => [...valeurs].sort(compareValeurs)
+
 export const parametresAPI = {
-  getList: (listeNom: string) =>
-    axios.get<ParametreValeur[]>(`/api/parametres/${listeNom}`),
+  getList: async (listeNom: string) => {
+    const res = await axios.get<ParametreValeur[]>(`/api/parametres/${listeNom}`)
+    res.data = [...res.data].sort((a, b) => compareValeurs(a.valeur, b.valeur))
+    return res
+  },
 
   add: (listeNom: string, valeur: string) =>
     axios.post<ParametreValeur>(`/api/parametres/${listeNom}`, { valeur }),

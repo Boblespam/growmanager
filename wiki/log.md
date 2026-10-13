@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-13] Feature | Tri alphabétique de toutes les listes paramétrables
+
+Demande de Pik, validée telle quelle (y compris pour les listes à ordre logique : périodes de recette, états du matériel). Tri centralisé dans `parametresAPI.getList()` (`api/parametres.ts`) : `Intl.Collator('fr', { sensitivity: 'base', numeric: true })`, donc couvre le hook `useParametreListe`, Paramétrage et les appels directs (NouvellerCultureModal, PreparationSubstrat), en mode serveur comme en mode local. Helpers exportés `compareValeurs` / `trierValeurs`, utilisés aussi pour les unions de valeurs (filtres Matériel, pastilles compatibilités vapo, valeur hors liste dans `SelectWithAdd`). Le champ `ordre` n'est plus utilisé pour l'affichage.
+
+### Files modified
+- `frontend/src/api/parametres.ts`, `frontend/src/components/{SelectWithAdd,NouveauVapoModal}.tsx`, `frontend/src/pages/Materiel.tsx`
+
 ## [2026-10-13] Bugfix | Doublons dans les listes paramétrables (3.8.0)
 
 Constat de Pik après déploiement : catégories et états du matériel en double. Cause : seed en parallèle des 2 workers uvicorn sur les nouvelles listes vides. Correction validée : dédoublonnage + index unique `uq_parametre_liste_valeur` dans `run_migrations()`, seed en `INSERT IGNORE`, 409 sur doublon en POST/PATCH. Détail : [[bugs/parametres-doublons-seed-workers]].

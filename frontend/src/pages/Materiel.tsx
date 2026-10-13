@@ -6,7 +6,7 @@ import {
   Thermometer, Battery, Zap, Droplets, Package,
 } from 'lucide-react'
 import { materielAPI } from '../api/materiel'
-import { useParametreListe } from '../api/parametres'
+import { useParametreListe, trierValeurs } from '../api/parametres'
 import type { Materiel } from '../api/materiel'
 import { vaporisateurAPI } from '../api/vaporisateur'
 import type { Vaporisateur } from '../api/vaporisateur'
@@ -429,12 +429,12 @@ export default function MaterielPage() {
   // Listes paramétrables (+ valeurs encore portées par des items mais retirées de la liste)
   const { values: categoriesParam } = useParametreListe('materiel_categories')
   const { values: etatsParam }      = useParametreListe('etats_materiel')
-  const categories = useMemo(() => [...new Set([
+  const categories = useMemo(() => trierValeurs([...new Set([
     ...categoriesParam, ...items.map(i => i.categorie).filter(Boolean),
-  ])], [categoriesParam, items])
-  const etats = useMemo(() => [...new Set([
+  ])]), [categoriesParam, items])
+  const etats = useMemo(() => trierValeurs([...new Set([
     ...etatsParam, ...items.map(i => i.etat).filter((e): e is string => !!e),
-  ])], [etatsParam, items])
+  ])]), [etatsParam, items])
 
   // ── Stats globales ─────────────────────────────────────────────────────────
   const stats = useMemo(() => {

@@ -1,8 +1,7 @@
-fix: doublons dans les listes paramétrables (seed en parallèle des 2 workers)
+feat: tri alphabétique de toutes les listes paramétrables
 
-- Suppression automatique des doublons de ParametreListeValeur au démarrage
-- Index unique (liste_nom, valeur) et seed en INSERT IGNORE pour empêcher la récidive
-- Ajout ou renommage vers une valeur existante : 409 au lieu d'une erreur 500
+- Tri français centralisé dans parametresAPI.getList (insensible casse/accents, nombres en ordre naturel)
+- Appliqué aux listes déroulantes, à l'écran Paramétrage, aux filtres Matériel et aux compatibilités vapo
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_013FUz1YHLp8jVfDjkP9UKG5

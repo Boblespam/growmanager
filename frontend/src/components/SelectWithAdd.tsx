@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
+import { trierValeurs } from '../api/parametres'
 
 // ── Select avec bouton "Ajouter" inline ───────────────────────────────────────
 // Partagé par les modales Matériel / Vaporisateur. Les valeurs viennent d'une
@@ -36,7 +37,7 @@ export default function SelectWithAdd({
   }
 
   // Valeur enregistrée absente de la liste (supprimée depuis Paramétrage) : on la garde affichable
-  const options = value && !values.includes(value) ? [...values, value] : values
+  const options = value && !values.includes(value) ? trierValeurs([...values, value]) : values
 
   if (adding) {
     return (

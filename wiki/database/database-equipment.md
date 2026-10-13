@@ -127,6 +127,8 @@ Stores all dropdown/select values used in the UI.
 
 Managed via `Parametrage` page and `/api/parametres/{liste_nom}` endpoints.
 
+**Affichage trié alphabétiquement** (depuis 2026-10-13) dans `parametresAPI.getList()` : tri français, insensible casse/accents, numérique naturel. Le champ `ordre` est conservé en base mais n'influence plus l'affichage.
+
 **Valeurs verrouillées** (`LISTES_VERROUILLEES`, backend + `api/parametres.ts`) : non renommables / non supprimables (403), toujours ré-insérées au seed. Actuellement : les 11 catégories de base de `materiel_categories`. Voir [[architecture/decisions]] ADR-009.
 
 **Listes Matériel :** `materiel_categories` 🔒, `etats_materiel`, `lampes_types`, `spectres`, `pot_matieres`, `bocal_fermetures`, `bocal_couleurs`, `bocal_usages`, `arrosage_types`, `pompe_types`, `ventilation_types`, `filet_types`, `sechage_types`, `outil_types`, `marques`, `fournisseurs`.
