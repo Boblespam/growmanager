@@ -5,7 +5,8 @@ import {
   ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Wrench, Euro, Hash, Tag, Wind,
   Thermometer, Battery, Zap, Droplets, Package,
 } from 'lucide-react'
-import { materielAPI, CATEGORIES } from '../api/materiel'
+import { materielAPI } from '../api/materiel'
+import { useParametreListe } from '../api/parametres'
 import type { Materiel } from '../api/materiel'
 import { vaporisateurAPI } from '../api/vaporisateur'
 import type { Vaporisateur } from '../api/vaporisateur'
@@ -425,18 +426,28 @@ export default function MaterielPage() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['materiel'] })
 
+  // Listes paramétrables (+ valeurs encore portées par des items mais retirées de la liste)
+  const { values: categoriesParam } = useParametreListe('materiel_categories')
+  const { values: etatsParam }      = useParametreListe('etats_materiel')
+  const categories = useMemo(() => [...new Set([
+    ...categoriesParam, ...items.map(i => i.categorie).filter(Boolean),
+  ])], [categoriesParam, items])
+  const etats = useMemo(() => [...new Set([
+    ...etatsParam, ...items.map(i => i.etat).filter((e): e is string => !!e),
+  ])], [etatsParam, items])
+
   // ── Stats globales ─────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total      = items.length
     const withPrix   = items.filter(i => i.prix_achat != null)
     const valeurTot  = withPrix.reduce((s, i) => s + Number(i.prix_achat), 0)
     const horsService = items.filter(i => i.etat === 'Hors service').length
-    const byCat = CATEGORIES.reduce<Record<string, number>>((acc, c) => {
+    const byCat = categories.reduce<Record<string, number>>((acc, c) => {
       acc[c] = items.filter(i => i.categorie === c).length
       return acc
     }, {})
     return { total, valeurTot, horsService, byCat }
-  }, [items])
+  }, [items, categories])
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -578,17 +589,14 @@ export default function MaterielPage() {
           <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
             className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
             <option value="all">Toutes les catégories</option>
-            {CATEGORIES.map(c => (
-              <option key={c} value={c}>{CAT_ICONS[c]} {c} ({stats.byCat[c] ?? 0})</option>
+            {categories.map(c => (
+              <option key={c} value={c}>{CAT_ICONS[c] ?? '📦'} {c} ({stats.byCat[c] ?? 0})</option>
             ))}
           </select>
           <select value={etatFilter} onChange={e => setEtatFilter(e.target.value)}
             className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
             <option value="all">Tous les états</option>
-            <option>Neuf</option>
-            <option>Bon état</option>
-            <option>Usagé</option>
-            <option>Hors service</option>
+            {etats.map(e => <option key={e}>{e}</option>)}
           </select>
           <div className="ml-auto flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             {(['liste', 'groupe'] as const).map(mode => (

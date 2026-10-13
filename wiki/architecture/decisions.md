@@ -94,4 +94,14 @@ sources: [Documentation/claude.md, Documentation/PHASE1_SUMMARY.txt]
 
 ---
 
+## ADR-009 — Valeurs verrouillées dans les listes paramétrables (2026-10-13)
+
+**Context:** Pik veut que toutes les listes déroulantes soient paramétrables, y compris les catégories de matériel. Or le code s'appuie sur certaines valeurs : chaque catégorie de base a ses champs spécifiques (`CaractFields` dans `NouveauMaterielModal`), et `Bocaux` sert au lien stock / curing (`stock.py`, sessions de curing).
+
+**Decision:** Les listes restent dans `ParametreListeValeur`, mais un dictionnaire `LISTES_VERROUILLEES` (miroir backend `routers/parametre.py` + frontend `api/parametres.ts`, utilisé aussi par le mode local) liste les valeurs protégées : renommage et suppression refusés (403), ré-insertion au seed si absentes, cadenas dans Paramétrage. L'ajout de valeurs libres reste possible (catégorie libre = champs communs seulement).
+
+**Consequence:** Toute nouvelle valeur sur laquelle le code fait un test d'égalité doit être ajoutée à `LISTES_VERROUILLEES` des deux côtés. Les écrans gardent affichable une valeur enregistrée qui aurait été retirée de sa liste (`SelectWithAdd`, filtres Matériel).
+
+---
+
 *Add new ADRs here as architectural decisions are made.*

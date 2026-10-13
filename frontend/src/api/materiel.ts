@@ -70,6 +70,10 @@ export type Caracteristiques =
   | Record<string, unknown>
 
 // ── Types maîtres ─────────────────────────────────────────────────────────────
+// Catégories de base (verrouillées) : chacune a ses champs spécifiques dans
+// NouveauMaterielModal, et « Bocaux » est utilisé par le stock et le curing.
+// La liste affichée est la liste paramétrable `materiel_categories`, qui les contient
+// toujours et peut être enrichie de catégories libres (champs communs uniquement).
 export const CATEGORIES = [
   'Bocaux',
   'Lampes',
@@ -85,6 +89,7 @@ export const CATEGORIES = [
 ] as const
 export type Categorie = typeof CATEGORIES[number]
 
+// Valeurs par défaut de la liste paramétrable `etats_materiel`
 export const ETATS = ['Neuf', 'Bon état', 'Usagé', 'Hors service'] as const
 
 // ── Interface principale ───────────────────────────────────────────────────────

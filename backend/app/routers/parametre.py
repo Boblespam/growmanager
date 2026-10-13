@@ -21,6 +21,18 @@ LISTE_DEFAULTS: dict[str, list[str]] = {
     "types_culture":  ["Indoor", "Outdoor"],
     "engrais":        ["Living Soil (LSO)", "Aptus", "Hesi", "Aucun", "Autre"],
     "substrats":      ["LSO", "Terre", "Terre+Coco", "Coco", "NFT", "Billes d'argile", "Pleine terre"],
+    # Matériel — général
+    "materiel_categories": ["Bocaux", "Lampes", "Pots", "Coupelles et bacs", "Arrosage", "Tentes",
+                          "Pompes et Bulleurs", "Ventilation", "Filets", "Séchage", "Outils"],
+    "etats_materiel":    ["Neuf", "Bon état", "Usagé", "Hors service"],
+    # Matériel — vaporisateurs
+    "vapo_types_chauffe":  ["Conduction", "Convection", "Mixte", "Induction"],
+    "vapo_types_batterie": ["Intégrée", "Amovible 18650"],
+    "vapo_types_charge":   ["USB-C", "Propriétaire", "Micro-USB", "Autre"],
+    "vapo_compatibilites": ["Fleurs séchées", "Résines", "Concentrés (Rosin)"],
+    "vapo_conso_types":    ["Bol céramique", "Bol saphir", "Bol SiC", "Bol quartz",
+                            "Terps ball", "Screen", "Joint", "Embout", "Autre"],
+    "vapo_conso_matieres": ["Céramique", "Saphir", "SiC", "Quartz", "Titane", "Acier inox", "Verre", "Autre"],
     # Matériel
     "lampes_types":      ["LED", "HPS", "MH", "CMH"],
     "spectres":          ["Full Spectrum", "Veg", "Bloom", "2700K", "3000K", "4000K", "5000K",
@@ -56,6 +68,23 @@ LISTE_DEFAULTS: dict[str, list[str]] = {
     "types_sol_preparation": ["Sol vivant (LSO)", "Coco seul", "Terre seule", "Coco + Terre"],
 }
 
+# ── Valeurs verrouillées ──────────────────────────────────────────────────────
+# Le code s'appuie sur ces valeurs (champs spécifiques par catégorie, « Bocaux » pour
+# le stock et le curing) : ni renommables ni supprimables.
+# Miroir : frontend/src/api/parametres.ts (LISTES_VERROUILLEES).
+LISTES_VERROUILLEES: dict[str, list[str]] = {
+    "materiel_categories": LISTE_DEFAULTS["materiel_categories"],
+}
+
+
+def _check_non_verrouille(row: ParametreListeValeur):
+    if row.valeur in LISTES_VERROUILLEES.get(row.liste_nom, []):
+        raise HTTPException(
+            status_code=403,
+            detail=f"« {row.valeur} » est une valeur de base utilisée par l'application : "
+                   "elle ne peut être ni renommée ni supprimée",
+        )
+
 
 def seed_defaults(db: Session):
     """Insère les valeurs par défaut pour les listes vides au démarrage."""
@@ -65,6 +94,13 @@ def seed_defaults(db: Session):
         ).count()
         if count == 0:
             for i, v in enumerate(valeurs):
+                db.add(ParametreListeValeur(liste_nom=liste_nom, valeur=v, ordre=i))
+    # Les valeurs verrouillées doivent toujours exister
+    for liste_nom, valeurs in LISTES_VERROUILLEES.items():
+        existantes = {r.valeur for r in db.query(ParametreListeValeur).filter(
+            ParametreListeValeur.liste_nom == liste_nom).all()}
+        for i, v in enumerate(valeurs):
+            if v not in existantes:
                 db.add(ParametreListeValeur(liste_nom=liste_nom, valeur=v, ordre=i))
     db.commit()
 
@@ -109,6 +145,8 @@ def update_value(id_parametre: int, payload: ParametreUpdate, db: Session = Depe
     ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Paramètre introuvable")
+    if payload.valeur is not None and payload.valeur != row.valeur:
+        _check_non_verrouille(row)
     if payload.valeur is not None:
         row.valeur = payload.valeur
     if payload.ordre is not None:
@@ -125,5 +163,6 @@ def delete_value(id_parametre: int, db: Session = Depends(get_db)):
     ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Paramètre introuvable")
+    _check_non_verrouille(row)
     db.delete(row)
     db.commit()

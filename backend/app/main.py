@@ -11,7 +11,7 @@ from app.services.govee_poller import start_poller
 app = FastAPI(
     title="GrowManager API",
     description="API pour la gestion de cultures de cannabis",
-    version="3.7.1",
+    version="3.8.0",
 )
 
 # Configuration CORS pour le développement
@@ -309,6 +309,20 @@ def run_migrations():
         except Exception:
             pass
 
+        # Migration : compatibilités vapo, clés techniques → libellés (liste paramétrable
+        # `vapo_compatibilites`). Idempotent : les libellés ne contiennent plus les clés.
+        try:
+            conn.execute(text(
+                "UPDATE `Vaporisateur` SET compatibilites = "
+                "REPLACE(REPLACE(REPLACE(compatibilites, "
+                "'fleurs_sechees', 'Fleurs séchées'), "
+                "'concentres', 'Concentrés (Rosin)'), "
+                "'resines', 'Résines') "
+                "WHERE compatibilites REGEXP 'fleurs_sechees|concentres|resines'"
+            ))
+        except Exception:
+            pass
+
         conn.commit()
 
 run_migrations()
@@ -409,7 +423,7 @@ def read_root():
     """Endpoint racine"""
     return {
         "message": "Bienvenue sur l'API GrowManager",
-        "version": "3.7.1",
+        "version": "3.8.0",
         "docs": "/docs",
     }
 

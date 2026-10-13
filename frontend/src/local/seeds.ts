@@ -2,6 +2,7 @@
 // Miroir de backend/app/routers/app_settings.py (SETTINGS_DEFAULTS)
 // et backend/app/routers/parametre.py (LISTE_DEFAULTS).
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
+import { LISTES_VERROUILLEES } from '../api/parametres'
 
 const SETTINGS_DEFAULTS: { cle: string; valeur: string; label: string }[] = [
   { cle: 'prix_kwh', valeur: '0.18', label: 'Prix du kWh (€)' },
@@ -18,6 +19,16 @@ const LISTE_DEFAULTS: Record<string, string[]> = {
   types_culture: ['Indoor', 'Outdoor'],
   engrais: ['Living Soil (LSO)', 'Aptus', 'Hesi', 'Aucun', 'Autre'],
   substrats: ['LSO', 'Terre', 'Terre+Coco', 'Coco', 'NFT', "Billes d'argile", 'Pleine terre'],
+  materiel_categories: ['Bocaux', 'Lampes', 'Pots', 'Coupelles et bacs', 'Arrosage', 'Tentes',
+                        'Pompes et Bulleurs', 'Ventilation', 'Filets', 'Séchage', 'Outils'],
+  etats_materiel: ['Neuf', 'Bon état', 'Usagé', 'Hors service'],
+  vapo_types_chauffe: ['Conduction', 'Convection', 'Mixte', 'Induction'],
+  vapo_types_batterie: ['Intégrée', 'Amovible 18650'],
+  vapo_types_charge: ['USB-C', 'Propriétaire', 'Micro-USB', 'Autre'],
+  vapo_compatibilites: ['Fleurs séchées', 'Résines', 'Concentrés (Rosin)'],
+  vapo_conso_types: ['Bol céramique', 'Bol saphir', 'Bol SiC', 'Bol quartz',
+                     'Terps ball', 'Screen', 'Joint', 'Embout', 'Autre'],
+  vapo_conso_matieres: ['Céramique', 'Saphir', 'SiC', 'Quartz', 'Titane', 'Acier inox', 'Verre', 'Autre'],
   lampes_types: ['LED', 'HPS', 'MH', 'CMH'],
   spectres: ['Full Spectrum', 'Veg', 'Bloom', '2700K', '3000K', '4000K', '5000K',
              '6500K', '254nm', '350nm', '450nm', '660nm', '730nm', '760nm'],
@@ -80,4 +91,21 @@ export async function seedDefaults(conn: SQLiteDBConnection): Promise<void> {
       }
     }
   }
+  // Les valeurs verrouillées doivent toujours exister (miroir backend seed_defaults)
+  for (const [listeNom, valeurs] of Object.entries(LISTES_VERROUILLEES)) {
+    const r = await conn.query('SELECT valeur FROM "ParametreListeValeur" WHERE liste_nom = ?', [listeNom])
+    const existantes = new Set((r.values ?? []).map(v => (v as { valeur: string }).valeur))
+    for (let i = 0; i < valeurs.length; i++) {
+      if (!existantes.has(valeurs[i])) {
+        await conn.run('INSERT INTO "ParametreListeValeur" (liste_nom, valeur, ordre) VALUES (?, ?, ?)',
+          [listeNom, valeurs[i], i])
+      }
+    }
+  }
+  // Compatibilités vapo : clés techniques → libellés (miroir backend run_migrations). Idempotent.
+  await conn.run(`UPDATE "Vaporisateur" SET compatibilites =
+      REPLACE(REPLACE(REPLACE(compatibilites, 'fleurs_sechees', 'Fleurs séchées'),
+        'concentres', 'Concentrés (Rosin)'), 'resines', 'Résines')
+    WHERE compatibilites LIKE '%fleurs_sechees%' OR compatibilites LIKE '%concentres%'
+       OR compatibilites LIKE '%resines%'`)
 }

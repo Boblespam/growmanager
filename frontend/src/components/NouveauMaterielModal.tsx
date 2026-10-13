@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Loader2, Plus, Trash2, RefreshCw } from 'lucide-react'
-import { materielAPI, CATEGORIES, ETATS, genBocalNom } from '../api/materiel'
+import { materielAPI, genBocalNom } from '../api/materiel'
 import type { MaterielCreate, MaterielUpdate, Materiel } from '../api/materiel'
 import { useParametreListeWithAdd } from '../api/parametres'
+import SelectWithAdd from './SelectWithAdd'
 
 // ── Helpers UI ────────────────────────────────────────────────────────────────
 const inputCls  = 'w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-grow-400 focus:border-transparent'
@@ -24,63 +25,6 @@ function NumInput({ value, onChange, placeholder }: { value: string; onChange: (
   return (
     <input type="number" step="any" className={inputCls}
       value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
-  )
-}
-
-// ── Select avec bouton "Ajouter" inline ───────────────────────────────────────
-function SelectWithAdd({
-  values, isAdding, onAddValue, value, onChange, placeholder = '—',
-}: {
-  values: string[]
-  isAdding: boolean
-  onAddValue: (v: string) => Promise<unknown>
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  const [adding, setAdding] = useState(false)
-  const [newVal, setNewVal] = useState('')
-
-  const handleAdd = async () => {
-    const v = newVal.trim()
-    if (!v) return
-    await onAddValue(v)
-    onChange(v)
-    setNewVal('')
-    setAdding(false)
-  }
-
-  if (adding) {
-    return (
-      <div className="flex gap-1">
-        <input autoFocus type="text" className={`${inputCls} flex-1`}
-          value={newVal} onChange={e => setNewVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}
-          placeholder="Nouvelle valeur…" />
-        <button type="button" onClick={handleAdd} disabled={isAdding || !newVal.trim()}
-          className="px-2 py-1 bg-grow-600 text-white text-xs rounded-lg hover:bg-grow-700 disabled:opacity-40">
-          {isAdding ? <Loader2 size={11} className="animate-spin" /> : '✓'}
-        </button>
-        <button type="button" onClick={() => setAdding(false)}
-          className="px-2 py-1 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/40">
-          ✕
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex gap-1">
-      <select className={`${selectCls} flex-1`} value={value} onChange={e => onChange(e.target.value)}>
-        <option value="">{placeholder}</option>
-        {values.map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
-      <button type="button" onClick={() => setAdding(true)}
-        className="px-2 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-grow-600 hover:border-grow-300 rounded-lg text-xs"
-        title="Ajouter une valeur">
-        <Plus size={13} />
-      </button>
-    </div>
   )
 }
 
@@ -367,6 +311,8 @@ export default function NouveauMaterielModal({ editItem, onClose }: Props) {
 
   const marques      = useParametreListeWithAdd('marques')
   const fournisseurs = useParametreListeWithAdd('fournisseurs')
+  const categories   = useParametreListeWithAdd('materiel_categories')
+  const etats        = useParametreListeWithAdd('etats_materiel')
 
   const [categorie,      setCategorie]      = useState(editItem?.categorie ?? '')
   const [nom,            setNom]            = useState(editItem?.nom ?? '')
@@ -524,10 +470,9 @@ export default function NouveauMaterielModal({ editItem, onClose }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Field label="Catégorie" required>
-                <select className={selectCls} value={categorie} onChange={e => setCategorie(e.target.value)}>
-                  <option value="">— choisir —</option>
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
+                <SelectWithAdd values={categories.values} isAdding={categories.isAdding}
+                  onAddValue={categories.addValue}
+                  value={categorie} onChange={setCategorie} placeholder="— choisir —" />
               </Field>
             </div>
             <div className={!!categorie && !isEdit ? 'col-span-2 grid grid-cols-[1fr_auto] gap-3' : 'col-span-2'}>
@@ -593,10 +538,9 @@ export default function NouveauMaterielModal({ editItem, onClose }: Props) {
 
             {/* État */}
             <Field label="État">
-              <select className={selectCls} value={etat} onChange={e => setEtat(e.target.value)}>
-                <option value="">—</option>
-                {ETATS.map(e => <option key={e}>{e}</option>)}
-              </select>
+              <SelectWithAdd values={etats.values} isAdding={etats.isAdding}
+                onAddValue={etats.addValue}
+                value={etat} onChange={setEtat} />
             </Field>
 
             <Field label="Date d'achat">

@@ -17,6 +17,22 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.8.0] - 2026-10-13
+
+### Ajouté
+- **Listes déroulantes du Matériel entièrement paramétrables** (Paramétrage, sections « Matériel — Général » et « Matériel — Vaporisateurs ») : catégories de matériel, états, et pour les vaporisateurs type de chauffe, type de batterie, type de charge, compatibilités, types et matières de consommable. Bouton ➕ d'ajout inline dans les formulaires (backend + mode local).
+- **Catégories de matériel personnalisées** : les 11 catégories de base sont verrouillées 🔒 (ni renommables ni supprimables, contrôle backend + mode local) ; une catégorie ajoutée n'a que les champs communs.
+- **Session vapo** : les types de produit proposés viennent de la liste `types_stock` (même référentiel que le Stock).
+
+### Modifié
+- **Compatibilités vapo** stockées en libellés au lieu de clés techniques ; migration automatique des vapos existants au démarrage (backend + mode local).
+- Les filtres Catégorie et État de la page Matériel suivent les listes paramétrables.
+
+### Corrigé
+- **Vaporisateur** : la température min / max n'est plus plafonnée à 300 °C dans le formulaire.
+
+---
+
 ## [3.7.1] - 2026-10-11
 
 ### Corrigé

@@ -1,5 +1,17 @@
 import axios from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CATEGORIES } from './materiel'
+
+// ── Valeurs verrouillées ──────────────────────────────────────────────────────
+// Valeurs sur lesquelles le code s'appuie (champs spécifiques, liens stock/curing…) :
+// ni renommables ni supprimables depuis Paramétrage. Miroir : backend/app/routers/parametre.py (LISTES_VERROUILLEES).
+export const LISTES_VERROUILLEES: Record<string, readonly string[]> = {
+  materiel_categories: CATEGORIES,
+}
+
+export function isValeurVerrouillee(listeNom: string, valeur: string): boolean {
+  return LISTES_VERROUILLEES[listeNom]?.includes(valeur) ?? false
+}
 
 export interface ParametreValeur {
   id_parametre: number

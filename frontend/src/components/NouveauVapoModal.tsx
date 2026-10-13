@@ -4,81 +4,20 @@ import { X, Plus, Trash2, Loader2, Thermometer, Battery, Zap, Package } from 'lu
 import { vaporisateurAPI } from '../api/vaporisateur'
 import type { Vaporisateur, VaporisateurCreate, VapoConsommable, VapoConsommableCreate } from '../api/vaporisateur'
 import { useParametreListeWithAdd } from '../api/parametres'
+import SelectWithAdd from './SelectWithAdd'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const TYPES_CHAUFFE  = ['Conduction', 'Convection', 'Mixte', 'Induction']
-const TYPES_BATTERIE = ['Intégrée', 'Amovible 18650']
-const TYPES_CHARGE   = ['USB-C', 'Propriétaire', 'Micro-USB', 'Autre']
-const COMPATIBILITES = [
-  { key: 'fleurs_sechees', label: 'Fleurs séchées' },
-  { key: 'resines',        label: 'Résines' },
-  { key: 'concentres',     label: 'Concentrés (Rosin)' },
-]
-const TYPES_CONSO  = [
-  'Bol céramique', 'Bol saphir', 'Bol SiC', 'Bol quartz',
-  'Terps ball', 'Screen', 'Joint', 'Embout', 'Autre',
-]
-const MATIERES_CONSO = ['Céramique', 'Saphir', 'SiC', 'Quartz', 'Titane', 'Acier inox', 'Verre', 'Autre']
-
-// ── Select avec bouton "Ajouter" inline (partagé avec NouveauMaterielModal) ───
+// Toutes les listes déroulantes sont paramétrables (Paramétrage > Matériel — Vaporisateurs).
 const inputCls = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800'
 
-function SelectWithAdd({
-  values, isAdding, onAddValue, value, onChange, placeholder = '—',
-}: {
-  values: string[]
-  isAdding: boolean
-  onAddValue: (v: string) => Promise<unknown>
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  const [adding, setAdding] = useState(false)
-  const [newVal, setNewVal] = useState('')
-
-  const handleAdd = async () => {
-    const v = newVal.trim()
-    if (!v) return
-    await onAddValue(v)
-    onChange(v)
-    setNewVal('')
-    setAdding(false)
-  }
-
-  if (adding) {
-    return (
-      <div className="flex gap-1">
-        <input autoFocus type="text" className={`${inputCls} flex-1`}
-          value={newVal} onChange={e => setNewVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } if (e.key === 'Escape') setAdding(false) }}
-          placeholder="Nouvelle valeur…" />
-        <button type="button" onClick={handleAdd} disabled={isAdding || !newVal.trim()}
-          className="px-2 py-1 bg-grow-600 text-white rounded-lg text-xs hover:bg-grow-700 disabled:opacity-50">
-          {isAdding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-        </button>
-        <button type="button" onClick={() => setAdding(false)}
-          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700">
-          ✕
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex gap-1">
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className={`${inputCls} flex-1`}>
-        <option value="">{placeholder}</option>
-        {values.map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
-      <button type="button" onClick={() => setAdding(true)}
-        title="Ajouter une valeur"
-        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-500 hover:text-grow-600 hover:border-grow-400">
-        <Plus size={12} />
-      </button>
-    </div>
-  )
+// Anciennes clés techniques des compatibilités (avant v. paramétrable) → libellés
+const LEGACY_COMPAT: Record<string, string> = {
+  fleurs_sechees: 'Fleurs séchées',
+  resines:        'Résines',
+  concentres:     'Concentrés (Rosin)',
 }
+// Les compatibilités sont stockées en CSV : une virgule dans un libellé casserait le découpage
+const compatVal = (v: string) => v.replace(/,/g, ' ').trim()
 
 function buildNom(marque: string, modele: string, existingNoms: string[]): string {
   if (!marque && !modele) return ''
@@ -97,6 +36,8 @@ interface ConsoFormProps {
   isSaving: boolean
 }
 function ConsoForm({ conso, vapoId, onSave, onCancel, isSaving }: ConsoFormProps) {
+  const consoTypes    = useParametreListeWithAdd('vapo_conso_types')
+  const consoMatieres = useParametreListeWithAdd('vapo_conso_matieres')
   const [form, setForm] = useState<VapoConsommableCreate>({
     id_vaporisateur:  vapoId,
     type_consommable: conso?.type_consommable ?? '',
@@ -114,21 +55,17 @@ function ConsoForm({ conso, vapoId, onSave, onCancel, isSaving }: ConsoFormProps
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Type *</label>
-          <select value={form.type_consommable}
-            onChange={e => setForm(f => ({ ...f, type_consommable: e.target.value }))}
-            className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
-            <option value="">Choisir…</option>
-            {TYPES_CONSO.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <SelectWithAdd values={consoTypes.values} isAdding={consoTypes.isAdding}
+            onAddValue={consoTypes.addValue} className={inputCls} placeholder="Choisir…"
+            value={form.type_consommable}
+            onChange={v => setForm(f => ({ ...f, type_consommable: v }))} />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Matière</label>
-          <select value={form.matiere ?? ''}
-            onChange={e => setForm(f => ({ ...f, matiere: e.target.value || null }))}
-            className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
-            <option value="">—</option>
-            {MATIERES_CONSO.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <SelectWithAdd values={consoMatieres.values} isAdding={consoMatieres.isAdding}
+            onAddValue={consoMatieres.addValue} className={inputCls}
+            value={form.matiere ?? ''}
+            onChange={v => setForm(f => ({ ...f, matiere: v || null }))} />
         </div>
       </div>
 
@@ -198,6 +135,11 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
   // Listes partagées avec Materiel
   const marques      = useParametreListeWithAdd('marques')
   const fournisseurs = useParametreListeWithAdd('fournisseurs')
+  // Listes propres aux vaporisateurs
+  const typesChauffe  = useParametreListeWithAdd('vapo_types_chauffe')
+  const typesBatterie = useParametreListeWithAdd('vapo_types_batterie')
+  const typesCharge   = useParametreListeWithAdd('vapo_types_charge')
+  const compatibilites = useParametreListeWithAdd('vapo_compatibilites')
 
   // liste des vapos existants pour auto-numéroter
   const { data: allVapos = [] } = useQuery<Vaporisateur[]>({
@@ -247,7 +189,7 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
   )
 
   const [compatSet, setCompatSet] = useState<Set<string>>(
-    new Set((editVapo?.compatibilites ?? '').split(',').filter(Boolean))
+    new Set((editVapo?.compatibilites ?? '').split(',').filter(Boolean).map(k => LEGACY_COMPAT[k] ?? k))
   )
   // Synchronise les compatibilités dans le form
   useEffect(() => {
@@ -409,12 +351,10 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Type de chauffe</label>
-                  <select value={form.type_chauffe ?? ''}
-                    onChange={e => setForm(f => ({ ...f, type_chauffe: e.target.value || null }))}
-                    className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
-                    <option value="">—</option>
-                    {TYPES_CHAUFFE.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <SelectWithAdd values={typesChauffe.values} isAdding={typesChauffe.isAdding}
+                    onAddValue={typesChauffe.addValue} className={inputCls}
+                    value={form.type_chauffe ?? ''}
+                    onChange={v => setForm(f => ({ ...f, type_chauffe: v || null }))} />
                 </div>
                 <div className="flex items-center gap-3 pt-5">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -426,7 +366,7 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Temp. min (°C)</label>
-                  <input type="number" min="0" max="300"
+                  <input type="number" min="0"
                     value={form.temp_min ?? ''}
                     onChange={e => setForm(f => ({ ...f, temp_min: e.target.value ? Number(e.target.value) : null }))}
                     placeholder="140"
@@ -434,7 +374,7 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Temp. max (°C)</label>
-                  <input type="number" min="0" max="300"
+                  <input type="number" min="0"
                     value={form.temp_max ?? ''}
                     onChange={e => setForm(f => ({ ...f, temp_max: e.target.value ? Number(e.target.value) : null }))}
                     placeholder="230"
@@ -455,11 +395,11 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
             <section>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Compatibilités</h3>
               <div className="flex flex-wrap gap-2">
-                {COMPATIBILITES.map(({ key, label }) => (
-                  <button key={key} type="button"
-                    onClick={() => toggleCompat(key)}
+                {[...new Set([...compatibilites.values.map(compatVal), ...compatSet])].filter(Boolean).map(label => (
+                  <button key={label} type="button"
+                    onClick={() => toggleCompat(label)}
                     className={`px-3 py-1.5 text-sm rounded-full border font-medium transition-colors ${
-                      compatSet.has(key)
+                      compatSet.has(label)
                         ? 'bg-grow-600 text-white border-grow-600'
                         : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-grow-400'
                     }`}>
@@ -477,21 +417,17 @@ export default function NouveauVapoModal({ editVapo, onClose }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Type de batterie</label>
-                  <select value={form.type_batterie ?? ''}
-                    onChange={e => setForm(f => ({ ...f, type_batterie: e.target.value || null }))}
-                    className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
-                    <option value="">—</option>
-                    {TYPES_BATTERIE.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <SelectWithAdd values={typesBatterie.values} isAdding={typesBatterie.isAdding}
+                    onAddValue={typesBatterie.addValue} className={inputCls}
+                    value={form.type_batterie ?? ''}
+                    onChange={v => setForm(f => ({ ...f, type_batterie: v || null }))} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Type de charge</label>
-                  <select value={form.type_charge ?? ''}
-                    onChange={e => setForm(f => ({ ...f, type_charge: e.target.value || null }))}
-                    className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800">
-                    <option value="">—</option>
-                    {TYPES_CHARGE.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <SelectWithAdd values={typesCharge.values} isAdding={typesCharge.isAdding}
+                    onAddValue={typesCharge.addValue} className={inputCls}
+                    value={form.type_charge ?? ''}
+                    onChange={v => setForm(f => ({ ...f, type_charge: v || null }))} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Autonomie (sessions)</label>

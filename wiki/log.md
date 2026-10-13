@@ -6,6 +6,23 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-13] Feature | Listes déroulantes Matériel + Vaporisateurs paramétrables
+
+**Demande de Pik :** toutes les listes déroulantes du module Matériel (y compris vaporisateurs) doivent être paramétrables dans Paramétrage. Analyse : 14 listes déjà paramétrables, 9 codées en dur. Décisions de Pik : catégories paramétrables avec les 11 de base verrouillées ; compatibilités vapo paramétrables avec migration ; session vapo branchée sur `types_stock`.
+
+### Réalisé (validé par Pik)
+- 8 nouvelles listes `ParametreListeValeur` : `materiel_categories`, `etats_materiel`, `vapo_types_chauffe`, `vapo_types_batterie`, `vapo_types_charge`, `vapo_compatibilites`, `vapo_conso_types`, `vapo_conso_matieres` (défauts dans `LISTE_DEFAULTS` backend + `local/seeds.ts`).
+- Valeurs verrouillées : `LISTES_VERROUILLEES` (backend `parametre.py` + `api/parametres.ts`) ; PATCH (renommage) / DELETE → 403 ; seed garantit leur présence. Cadenas dans `ListeEditor`. Voir [[architecture/decisions]] ADR-009.
+- Composant partagé `components/SelectWithAdd.tsx` (remplace les 2 copies des modales Matériel / Vapo) ; garde affichable une valeur enregistrée retirée de la liste.
+- Compatibilités vapo : stockées en libellés (CSV) ; migration idempotente des clés `fleurs_sechees` / `resines` / `concentres` dans `run_migrations()` et `seedDefaults()` local ; virgules retirées des libellés pour ne pas casser le CSV.
+- `NouveauSessionVapoModal` : types depuis `types_stock`, style (icône/couleur) conservé pour les types connus, 📦 sinon.
+- Page Matériel : filtres Catégorie / État depuis les listes (+ valeurs portées par des items).
+- Bugfix : plafond `max="300"` retiré sur temp. min / max du vapo (aucune limite backend).
+
+### Files modified
+- `backend/app/routers/parametre.py`, `backend/app/main.py`
+- `frontend/src/api/{parametres,materiel}.ts`, `frontend/src/components/{SelectWithAdd (nouveau),NouveauMaterielModal,NouveauVapoModal,NouveauSessionVapoModal}.tsx`, `frontend/src/pages/{Materiel,Parametrage}.tsx`, `frontend/src/local/{seeds.ts,handlers/parametres.ts}`
+
 ## [2026-10-11] Bugfix | Enracinement des boutures (clones et boutures externes)
 
 **Constat de Pik après déploiement de la 3.7.0 :** une bouture ajoutée dans une culture s'affichait « Germination », sans moyen visible de valider l'enracinement (icône 14 px sans texte ; et sur la plante testée, `statut_clone` n'avait pas été enregistré, probablement backend prod pas encore à jour).

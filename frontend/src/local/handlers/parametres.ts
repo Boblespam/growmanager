@@ -2,6 +2,15 @@
 // Miroir de backend/app/routers/{app_settings,parametre}.py (seeds → local/seeds.ts)
 import { route, LocalHttpError } from '../router'
 import { query, one, oneOr404, insert, run } from '../helpers'
+import { isValeurVerrouillee } from '../../api/parametres'
+
+type ParamRow = { liste_nom: string; valeur: string }
+function checkNonVerrouille(row: ParamRow) {
+  if (isValeurVerrouillee(row.liste_nom, row.valeur)) {
+    throw new LocalHttpError(403,
+      `« ${row.valeur} » est une valeur de base utilisée par l'application : elle ne peut être ni renommée ni supprimée`)
+  }
+}
 
 // ── AppSettings ───────────────────────────────────────────────────────────────
 
@@ -54,9 +63,10 @@ route('POST', '/parametres/:liste_nom', async ({ params, body }) => {
 })
 
 route('PATCH', '/parametres/:id', async ({ params, body }) => {
-  await oneOr404('SELECT * FROM "ParametreListeValeur" WHERE id_parametre = ?',
+  const row = await oneOr404<ParamRow>('SELECT * FROM "ParametreListeValeur" WHERE id_parametre = ?',
     [params.id], 'Paramètre introuvable')
   const b = body as { valeur?: unknown; ordre?: unknown }
+  if (b.valeur !== undefined && b.valeur !== null && String(b.valeur) !== row.valeur) checkNonVerrouille(row)
   if (b.valeur !== undefined && b.valeur !== null) {
     await run('UPDATE "ParametreListeValeur" SET valeur = ? WHERE id_parametre = ?', [String(b.valeur), params.id])
   }
@@ -67,8 +77,9 @@ route('PATCH', '/parametres/:id', async ({ params, body }) => {
 })
 
 route('DELETE', '/parametres/:id', async ({ params }) => {
-  await oneOr404('SELECT * FROM "ParametreListeValeur" WHERE id_parametre = ?',
+  const row = await oneOr404<ParamRow>('SELECT * FROM "ParametreListeValeur" WHERE id_parametre = ?',
     [params.id], 'Paramètre introuvable')
+  checkNonVerrouille(row)
   await run('DELETE FROM "ParametreListeValeur" WHERE id_parametre = ?', [params.id])
   return { status: 204 }
 })

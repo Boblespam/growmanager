@@ -1,10 +1,11 @@
-fix: enracinement des boutures (etiquette, bouton Valider l'enracinement, passage en vegetation)
+feat: listes déroulantes Matériel et Vaporisateurs paramétrables
 
-- Bouture en attente affichee Enracinement au lieu de Germination
-- Bouton texte Valider l'enracinement a cote du badge En attente d'enracinement
-- Bouture externe sans statut_clone consideree en attente
-- Enracinement valide : la plante passe en vegetation (backend + mode local)
-- Duree de flo affichee en jours sur la carte de plante
+- 8 nouvelles listes paramétrables : catégories et états du matériel, type de chauffe, batterie, charge, compatibilités, types et matières de consommable vapo
+- 11 catégories de base verrouillées (ni renommables ni supprimables), catégories libres possibles
+- Compatibilités vapo stockées en libellés, migration automatique des clés existantes
+- Session vapo : types de produit depuis la liste types_stock
+- Composant partagé SelectWithAdd (ajout inline)
+- Fix : température min/max du vapo n'est plus plafonnée à 300 °C
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01AKwhugsThj7H4tHaUTKQQ7
+Claude-Session: https://claude.ai/code/session_013FUz1YHLp8jVfDjkP9UKG5

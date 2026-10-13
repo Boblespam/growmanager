@@ -83,14 +83,14 @@ General equipment inventory, replaces the old per-type tables for tracking physi
 | Column | Type | Notes |
 |---|---|---|
 | `id_materiel` | PK | |
-| `categorie` | String | `Pots` \| `Bocaux` \| `Lampes` \| `Ventilateurs` \| `Irrigations` \| `Outils` \| etc. |
+| `categorie` | String | Liste paramétrable `materiel_categories`. 11 catégories de base verrouillées (Bocaux, Lampes, Pots, Coupelles et bacs, Arrosage, Tentes, Pompes et Bulleurs, Ventilation, Filets, Séchage, Outils) + catégories libres (champs communs seulement) |
 | `nom` | String | Item name |
 | `marque` | String (nullable) | |
 | `code_barre_serial` | String (nullable) | Serial/barcode |
 | `date_achat` | Date (nullable) | |
 | `prix_achat` | Float (nullable) | |
 | `site_achat` | String (nullable) | |
-| `etat` | String | `Neuf` \| `Bon état` \| `Usagé` \| `Hors service` |
+| `etat` | String | Liste paramétrable `etats_materiel` (défaut : Neuf, Bon état, Usagé, Hors service). `Hors service` utilisé par les stats |
 | `date_sortie_stock` | Date (nullable) | Soft delete — retired date |
 | `notes` | Text (nullable) | |
 | `caracteristiques` | JSON (nullable) | Category-specific specs |
@@ -126,6 +126,12 @@ Stores all dropdown/select values used in the UI.
 | `ordre` | Int | Display order |
 
 Managed via `Parametrage` page and `/api/parametres/{liste_nom}` endpoints.
+
+**Valeurs verrouillées** (`LISTES_VERROUILLEES`, backend + `api/parametres.ts`) : non renommables / non supprimables (403), toujours ré-insérées au seed. Actuellement : les 11 catégories de base de `materiel_categories`. Voir [[architecture/decisions]] ADR-009.
+
+**Listes Matériel :** `materiel_categories` 🔒, `etats_materiel`, `lampes_types`, `spectres`, `pot_matieres`, `bocal_fermetures`, `bocal_couleurs`, `bocal_usages`, `arrosage_types`, `pompe_types`, `ventilation_types`, `filet_types`, `sechage_types`, `outil_types`, `marques`, `fournisseurs`.
+
+**Listes Vaporisateurs :** `vapo_types_chauffe`, `vapo_types_batterie`, `vapo_types_charge`, `vapo_compatibilites` (stockées en CSV de libellés dans `Vaporisateur.compatibilites`), `vapo_conso_types` (« terps » dans le libellé → champ diamètre), `vapo_conso_matieres`. La session vapo utilise `types_stock`.
 
 **Listes maillages disponibles :**
 - `maillages_polinator` — Maillages Polinator (µ). Fallback : `['120µ']`

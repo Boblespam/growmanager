@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Zap, Loader2 } from 'lucide-react'
 import client from '../api/client'
+import { useParametreListe } from '../api/parametres'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,9 @@ interface StockVapo {
 
 // ── Config types ──────────────────────────────────────────────────────────────
 
-const TYPES_VAPO = [
+// Les types proposés viennent de la liste paramétrable `types_stock` (même référentiel que le Stock).
+// Ce tableau ne sert plus qu'à habiller les types connus (icône, libellé, couleur).
+const TYPES_VAPO_STYLE = [
   { key: 'Fleur',     label: 'Fleur séchée',  icon: '🌿', color: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700' },
   { key: 'Hash',      label: 'Hash',           icon: '🟤', color: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700' },
   { key: 'Rosin',     label: 'Rosin',          icon: '💛', color: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700' },
@@ -26,6 +29,12 @@ const TYPES_VAPO = [
   { key: 'WPFF',      label: 'WPFF',           icon: '🌾', color: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700' },
   { key: 'Poussière', label: 'Poussière',      icon: '✨', color: 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600' },
 ]
+
+const STYLE_DEFAUT = { icon: '📦', color: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600' }
+function styleType(key: string) {
+  const t = TYPES_VAPO_STYLE.find(x => x.key === key)
+  return t ?? { key, label: key, ...STYLE_DEFAUT }
+}
 
 const inputCls = 'w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-grow-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'
 
@@ -50,6 +59,9 @@ interface Props {
 
 export default function NouveauSessionVapoModal({ vapoId, vapoNom, onClose }: Props) {
   const qc = useQueryClient()
+
+  const { values: typesStock } = useParametreListe('types_stock')
+  const typesVapo = typesStock.map(styleType)
 
   const [typeSelectionne, setTypeSelectionne] = useState<string | null>(null)
   const [idStock, setIdStock]     = useState<number | null>(null)
@@ -135,7 +147,7 @@ export default function NouveauSessionVapoModal({ vapoId, vapoNom, onClose }: Pr
               1 — Type de matériau
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {TYPES_VAPO.map(t => (
+              {typesVapo.map(t => (
                 <button
                   key={t.key}
                   type="button"

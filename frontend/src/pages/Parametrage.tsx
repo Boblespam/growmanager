@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Pencil, Check, X, Settings, ChevronDown, ChevronUp, ExternalLink,
+import { Plus, Trash2, Pencil, Check, X, Lock, Settings, ChevronDown, ChevronUp, ExternalLink,
          Thermometer, Wifi, WifiOff, RefreshCw, Save, Mail, Eye, EyeOff, AlertCircle,
          CheckCircle2, Loader2, Database, Download, Upload, UploadCloud, Euro,
          Smartphone, Server } from 'lucide-react'
 import apiClient, { getServerUrl, setServerUrl, testServerConnection, getAppMode, setAppMode, isNativeApp, type AppMode } from '../api/client'
-import { parametresAPI } from '../api/parametres'
+import { parametresAPI, isValeurVerrouillee } from '../api/parametres'
 import type { ParametreValeur } from '../api/parametres'
 import { useAppSetting } from '../api/appSettings'
 import { breederAPI } from '../api/breeders'
@@ -27,6 +27,24 @@ const SECTIONS = [
   },
 
   // ── Matériel (toutes les sous-catégories regroupées) ─────────────────────────
+  {
+    titre: 'Matériel — Général',
+    listes: [
+      { nom: 'materiel_categories', label: 'Catégories de matériel (🔒 = catégorie de base)' },
+      { nom: 'etats_materiel',      label: 'États du matériel' },
+    ],
+  },
+  {
+    titre: 'Matériel — Vaporisateurs',
+    listes: [
+      { nom: 'vapo_types_chauffe',  label: 'Types de chauffe' },
+      { nom: 'vapo_types_batterie', label: 'Types de batterie' },
+      { nom: 'vapo_types_charge',   label: 'Types de charge' },
+      { nom: 'vapo_compatibilites', label: 'Compatibilités (Fleurs, Résines…)' },
+      { nom: 'vapo_conso_types',    label: 'Types de consommable' },
+      { nom: 'vapo_conso_matieres', label: 'Matières de consommable' },
+    ],
+  },
   {
     titre: 'Matériel — Lampes',
     listes: [
@@ -203,6 +221,14 @@ function ListeEditor({ listeNom, label }: { listeNom: string; label: string }) {
                       className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                       <X size={13} />
                     </button>
+                  </>
+                ) : isValeurVerrouillee(listeNom, item.valeur) ? (
+                  <>
+                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-200">{item.valeur}</span>
+                    <span title="Valeur de base utilisée par l'application : ni renommable ni supprimable"
+                      className="p-1 text-gray-300 dark:text-gray-600">
+                      <Lock size={12} />
+                    </span>
                   </>
                 ) : (
                   <>
