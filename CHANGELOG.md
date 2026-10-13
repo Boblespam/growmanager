@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.8.1] - 2026-10-13
+
+### Corrigé
+- **Valeurs en double dans les listes paramétrables** (catégories et états du matériel, listes vapo) après le déploiement de la 3.8.0 : les 2 workers du backend remplissaient en parallèle les nouvelles listes vides. Doublons supprimés automatiquement au démarrage, index unique `(liste_nom, valeur)` et seed en `INSERT IGNORE` pour empêcher toute récidive. Ajout ou renommage vers une valeur existante : message « Cette valeur existe déjà » (409) au lieu d'une erreur serveur.
+
+---
+
 ## [3.8.0] - 2026-10-13
 
 ### Ajouté

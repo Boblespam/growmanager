@@ -1,11 +1,8 @@
-feat: listes déroulantes Matériel et Vaporisateurs paramétrables
+fix: doublons dans les listes paramétrables (seed en parallèle des 2 workers)
 
-- 8 nouvelles listes paramétrables : catégories et états du matériel, type de chauffe, batterie, charge, compatibilités, types et matières de consommable vapo
-- 11 catégories de base verrouillées (ni renommables ni supprimables), catégories libres possibles
-- Compatibilités vapo stockées en libellés, migration automatique des clés existantes
-- Session vapo : types de produit depuis la liste types_stock
-- Composant partagé SelectWithAdd (ajout inline)
-- Fix : température min/max du vapo n'est plus plafonnée à 300 °C
+- Suppression automatique des doublons de ParametreListeValeur au démarrage
+- Index unique (liste_nom, valeur) et seed en INSERT IGNORE pour empêcher la récidive
+- Ajout ou renommage vers une valeur existante : 409 au lieu d'une erreur 500
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_013FUz1YHLp8jVfDjkP9UKG5

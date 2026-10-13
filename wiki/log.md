@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-13] Bugfix | Doublons dans les listes paramétrables (3.8.0)
+
+Constat de Pik après déploiement : catégories et états du matériel en double. Cause : seed en parallèle des 2 workers uvicorn sur les nouvelles listes vides. Correction validée : dédoublonnage + index unique `uq_parametre_liste_valeur` dans `run_migrations()`, seed en `INSERT IGNORE`, 409 sur doublon en POST/PATCH. Détail : [[bugs/parametres-doublons-seed-workers]].
+
+### Files modified
+- `backend/app/main.py`, `backend/app/routers/parametre.py`
+
 ## [2026-10-13] Feature | Listes déroulantes Matériel + Vaporisateurs paramétrables
 
 **Demande de Pik :** toutes les listes déroulantes du module Matériel (y compris vaporisateurs) doivent être paramétrables dans Paramétrage. Analyse : 14 listes déjà paramétrables, 9 codées en dur. Décisions de Pik : catégories paramétrables avec les 11 de base verrouillées ; compatibilités vapo paramétrables avec migration ; session vapo branchée sur `types_stock`.

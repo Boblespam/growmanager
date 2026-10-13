@@ -82,4 +82,6 @@ Content catalog for the GrowManager development wiki. Read this first when start
 
 ## Bugs
 
-*(Empty — add files as bugs are filed)*
+- [[bugs/tapoconfig-migration-race]] — race `create_all()` entre les 2 workers uvicorn (ouvert)
+- [[bugs/version-bump-lockfile-deps]] — bump de version et lockfile
+- [[bugs/parametres-doublons-seed-workers]] — doublons des listes paramétrables après la 3.8.0 (corrigé 2026-10-13)

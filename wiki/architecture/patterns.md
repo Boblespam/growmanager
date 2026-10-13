@@ -28,6 +28,8 @@ if result == 0:
 
 **Rule:** Never use Alembic. Every schema change goes through this pattern.
 
+**Seeds au démarrage :** ils tournent dans chacun des 2 workers en parallèle. Un seed doit être sûr en concurrence (contrainte unique + `INSERT IGNORE`, ou verrou nommé MySQL), pas seulement idempotent. Exemple : `ParametreListeValeur` (index `uq_parametre_liste_valeur`), voir [[bugs/parametres-doublons-seed-workers]].
+
 **Piège connu — race condition multi-workers sur `create_all()` :** le backend prod tourne avec `uvicorn --workers 2` (`backend/Dockerfile.prod`). `Base.metadata.create_all()` (appelé à l'import de `main.py` et à nouveau dans `run_migrations()`) n'est pas protégé contre l'exécution concurrente : au premier démarrage après l'ajout d'une **nouvelle table**, les deux workers peuvent tenter de la créer en même temps → `(1050, "Table already exists")` sur l'un des deux, qui redémarre seul. Sans gravité (aucune perte de données) mais pas encore corrigé. Détail et pistes de fix : [[bugs/tapoconfig-migration-race]].
 
 ## 2. Router Enrichment Pattern

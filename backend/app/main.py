@@ -11,7 +11,7 @@ from app.services.govee_poller import start_poller
 app = FastAPI(
     title="GrowManager API",
     description="API pour la gestion de cultures de cannabis",
-    version="3.8.0",
+    version="3.8.1",
 )
 
 # Configuration CORS pour le développement
@@ -309,6 +309,30 @@ def run_migrations():
         except Exception:
             pass
 
+        # Migration : doublons ParametreListeValeur (v3.8.0). Les 2 workers uvicorn ont
+        # seedé en parallèle les nouvelles listes vides → chaque valeur insérée 2 fois.
+        # On garde la plus ancienne ligne, puis un index unique empêche toute récidive.
+        try:
+            conn.execute(text(
+                "DELETE p1 FROM `ParametreListeValeur` p1 "
+                "JOIN `ParametreListeValeur` p2 "
+                "ON p1.liste_nom = p2.liste_nom AND p1.valeur = p2.valeur "
+                "AND p1.id_parametre > p2.id_parametre"
+            ))
+            conn.commit()
+            result = conn.execute(text(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ParametreListeValeur' "
+                "AND INDEX_NAME = 'uq_parametre_liste_valeur'"
+            ))
+            if result.scalar() == 0:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX uq_parametre_liste_valeur "
+                    "ON `ParametreListeValeur` (liste_nom, valeur)"
+                ))
+        except Exception:
+            pass  # l'autre worker a pu créer l'index entre-temps
+
         # Migration : compatibilités vapo, clés techniques → libellés (liste paramétrable
         # `vapo_compatibilites`). Idempotent : les libellés ne contiennent plus les clés.
         try:
@@ -423,7 +447,7 @@ def read_root():
     """Endpoint racine"""
     return {
         "message": "Bienvenue sur l'API GrowManager",
-        "version": "3.8.0",
+        "version": "3.8.1",
         "docs": "/docs",
     }
 

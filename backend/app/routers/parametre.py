@@ -1,6 +1,8 @@
 """Router ParametreListeValeur — CRUD des listes déroulantes paramétrables"""
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -86,6 +88,22 @@ def _check_non_verrouille(row: ParametreListeValeur):
         )
 
 
+def _insert_ignore(db: Session, liste_nom: str, valeur: str, ordre: int):
+    # INSERT IGNORE + index unique (liste_nom, valeur) : les 2 workers uvicorn exécutent
+    # ce seed en parallèle au démarrage, le second ne doit pas créer de doublons.
+    db.execute(insert(ParametreListeValeur).prefix_with("IGNORE").values(
+        liste_nom=liste_nom, valeur=valeur, ordre=ordre))
+
+
+def _commit_or_409(db: Session):
+    """Index unique (liste_nom, valeur), insensible à la casse et aux accents (collation MySQL)."""
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Cette valeur existe déjà dans la liste")
+
+
 def seed_defaults(db: Session):
     """Insère les valeurs par défaut pour les listes vides au démarrage."""
     for liste_nom, valeurs in LISTE_DEFAULTS.items():
@@ -94,14 +112,14 @@ def seed_defaults(db: Session):
         ).count()
         if count == 0:
             for i, v in enumerate(valeurs):
-                db.add(ParametreListeValeur(liste_nom=liste_nom, valeur=v, ordre=i))
+                _insert_ignore(db, liste_nom, v, i)
     # Les valeurs verrouillées doivent toujours exister
     for liste_nom, valeurs in LISTES_VERROUILLEES.items():
         existantes = {r.valeur for r in db.query(ParametreListeValeur).filter(
             ParametreListeValeur.liste_nom == liste_nom).all()}
         for i, v in enumerate(valeurs):
             if v not in existantes:
-                db.add(ParametreListeValeur(liste_nom=liste_nom, valeur=v, ordre=i))
+                _insert_ignore(db, liste_nom, v, i)
     db.commit()
 
 
@@ -133,7 +151,7 @@ def add_value(liste_nom: str, payload: ParametreCreate, db: Session = Depends(ge
     ).scalar() or 0
     row = ParametreListeValeur(liste_nom=liste_nom, valeur=payload.valeur, ordre=max_ordre + 1)
     db.add(row)
-    db.commit()
+    _commit_or_409(db)
     db.refresh(row)
     return row
 
@@ -151,7 +169,7 @@ def update_value(id_parametre: int, payload: ParametreUpdate, db: Session = Depe
         row.valeur = payload.valeur
     if payload.ordre is not None:
         row.ordre = payload.ordre
-    db.commit()
+    _commit_or_409(db)
     db.refresh(row)
     return row
 
