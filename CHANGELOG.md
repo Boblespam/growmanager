@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.10.2] - 2026-10-18
+
+### Corrigé
+- **Volumes d'arrosage au millilitre** : les champs de volume de l'arrosage (eau pure, engrais via recette, volume utilisé, TCO) acceptent désormais n'importe quelle valeur jusqu'au millilitre (ex. 0.2 L, 0.001 L). Ils étaient bloqués sur des multiples de 0,5 L.
+
+---
+
 ## [3.10.1] - 2026-10-18
 
 ### Corrigé

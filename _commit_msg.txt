@@ -1,7 +1,1 @@
-fix: tuile « En croissance » vide sur la page de suivi de culture
-
-- date_debut_croissance ajoutée au schéma CultureRead (filtrée par response_model)
-- Repli sur la 1re action « Début croissance » du calendrier si le champ culture est vide (serveur + mode local)
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01T5NBuk1HjS9T627tbfQvrM
+fix: volumes d'arrosage saisissables au millilitre (step 0.001 au lieu de 0.5)

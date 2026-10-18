@@ -472,7 +472,7 @@ export default function ArrosageModal({ cultureId, plants, initialDate, onClose,
                   <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Volume total <span className="text-red-500">*</span></label>
                   <div className="flex items-center gap-1.5">
                     <input type="number" value={volumeL} onChange={e => setVolumeL(Number(e.target.value) || '')}
-                      min={0} step={0.1} placeholder="ex: 5"
+                      min={0} step={0.001} placeholder="ex: 5"
                       className="flex-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm" />
                     <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 whitespace-nowrap">L</span>
                   </div>
@@ -518,7 +518,7 @@ export default function ArrosageModal({ cultureId, plants, initialDate, onClose,
                 <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Volume total à arroser <span className="text-red-500">*</span></label>
                 <div className="flex items-center gap-1.5">
                   <input type="number" value={volumeL} onChange={e => setVolumeL(Number(e.target.value) || '')}
-                    min={0} step={0.5} placeholder="ex: 10"
+                    min={0} step={0.001} placeholder="ex: 10"
                     className="flex-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm" />
                   <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">L</span>
                 </div>
@@ -619,7 +619,7 @@ export default function ArrosageModal({ cultureId, plants, initialDate, onClose,
                 <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Volume utilisé <span className="text-gray-400 dark:text-gray-500">(opt.)</span></label>
                 <div className="flex items-center gap-1.5">
                   <input type="number" value={volumeL} onChange={e => setVolumeL(Number(e.target.value) || '')}
-                    min={0} step={0.5} placeholder="ex: 5"
+                    min={0} step={0.001} placeholder="ex: 5"
                     className="flex-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm" />
                   <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">L</span>
                 </div>
@@ -660,7 +660,7 @@ export default function ArrosageModal({ cultureId, plants, initialDate, onClose,
                     <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Volume à préparer <span className="text-red-500">*</span></label>
                     <div className="flex items-center gap-1.5">
                       <input type="number" value={volumeL} onChange={e => setVolumeL(Number(e.target.value) || '')}
-                        min={0} step={0.5}
+                        min={0} step={0.001}
                         placeholder={`ex: ${recetteTCOSelected.quantite_tco || '10'}`}
                         className="flex-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm" />
                       <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">L</span>

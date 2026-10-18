@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-18] Bugfix | Volumes d'arrosage saisissables au millilitre
+
+Constat de Pik : impossible de saisir 0,2 L dans « Volume total à arroser » (arrosage engrais via recette), le navigateur imposait un multiple de 0,5 L. Cause : attribut `step={0.5}` sur les inputs `number` (validation HTML5). Correction validée : `step={0.001}` sur les 4 champs de volume d'`ArrosageModal` (eau pure, engrais via recette, volume utilisé, volume TCO à préparer). Aucune limite côté serveur. Le volume des pots reste au pas de 0,5 L.
+
+### Files modified
+- `frontend/src/components/culture/ArrosageModal.tsx`
+
 ## [2026-10-18] Feature | Tuile « En croissance » dans la barre d'info du détail culture
 
 Demande de Pik, validée. Nouvelle tuile entre « Plantes actives » et « En floraison » : durée de croissance = de `date_debut_croissance` (action « Début croissance ») jusqu'au passage en floraison (`date_debut_floraison` sinon `date_passage_12_12`), ou aujourd'hui tant que la culture n'est pas en floraison. `date_debut_croissance` ajouté à la réponse du détail culture (serveur + local) et au type `Culture`. Grille passée à 7 colonnes en `xl`. Voir [[frontend/pages]].

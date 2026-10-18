@@ -38,6 +38,8 @@ Main grow cycle management. Shows active + completed cultures.
 - **Tuile « En croissance »** (2026-10-18) : jours depuis `Culture.date_debut_croissance` (posée par l'action « Début croissance »). Compteur qui avance tant que la culture n'est pas en floraison, puis figé à la date de floraison (`date_debut_floraison` sinon `date_passage_12_12`, même base que la tuile « En floraison »). « — » si pas de date de début de croissance. `date_debut_croissance` est désormais renvoyé par le détail culture (schéma `CultureRead` + `_enrich_culture` backend, `enrichCulture` local), avec repli sur la 1re action `debut_croissance` du calendrier si le champ culture est vide.
 - Modals: NouvellerCultureModal, ActionModal, ArrosageModal, TransfertPlantModal
 
+**ArrosageModal — volumes au millilitre** (2026-10-18) : les 4 champs de volume (eau pure, engrais via recette, volume utilisé, TCO à préparer) ont `step={0.001}`, donc toute valeur ≥ 0 jusqu'au mL est acceptée (ex. 0.2 L). Ne pas remettre un `step` à 0.5 : la validation HTML5 bloquerait les petits volumes.
+
 **ArrosageModal — plantes exclues de l'arrosage** (2026-04-27) : `plantesActives` exclut les statuts `sechage`, `recolte`, `curing`, `prete`, `abandonne`. Les plantes en séchage n'apparaissent donc plus dans les pills de sélection ni dans "Tout l'espace" pour les actions d'irrigation. Elles restent disponibles uniquement dans le dropdown `debut_curing` (plantesSechage).
 
 ### SechageCuring (`/sechage-curing`)
