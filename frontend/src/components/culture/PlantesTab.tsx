@@ -482,6 +482,7 @@ function PlantCard({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showEnraciner, setShowEnraciner] = useState(false)
+  const [confirmRate, setConfirmRate] = useState(false)
   const [dateEnr, setDateEnr] = useState(new Date().toISOString().slice(0, 10))
   const qc = useQueryClient()
 
@@ -491,7 +492,7 @@ function PlantCard({
   })
   const rateMutation = useMutation({
     mutationFn: () => plantAPI.cloneRate(plant.id_culture, plant.id_plant),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['culture', plant.id_culture] }); setShowEnraciner(false) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['culture', plant.id_culture] }); setShowEnraciner(false); setConfirmRate(false) },
   })
 
   const statut = plant.statut || 'germination'
@@ -668,6 +669,28 @@ function PlantCard({
                     >
                       <CheckCircle2 size={11} /> Valider l'enracinement
                     </button>
+                    {confirmRate ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                        <span className="text-red-700 dark:text-red-300">Déclarer morte ?</span>
+                        <button
+                          onClick={() => rateMutation.mutate()}
+                          disabled={rateMutation.isPending}
+                          className="px-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {rateMutation.isPending ? '...' : 'Oui'}
+                        </button>
+                        <button onClick={() => setConfirmRate(false)} className="px-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                          Non
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmRate(true)}
+                        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+                      >
+                        <XCircle size={11} /> Enracinement échoué
+                      </button>
+                    )}
                   </>
                 )}
                 {plant.statut_clone === 'enracine' && plant.date_enracinement && (

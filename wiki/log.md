@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-18] Feature | Bouton « Enracinement échoué » sur la carte bouture
+
+Constat de Pik : sur un clone en attente, aucun bouton visible pour le déclarer mort (le « Raté ❌ » n'existait qu'à la création du clone, ou caché dans le panneau ouvert par « Valider l'enracinement »). Ajout validé : bouton rouge « Enracinement échoué » à côté de « Valider l'enracinement » dans `PlantCard`, avec confirmation inline « Déclarer morte ? Oui / Non ». Appelle l'endpoint existant `PATCH .../clone-rate` (`statut_clone = 'rate'`, `statut = 'abandonne'`) : la plante reste en base dans « Terminées », exploitable pour les stats de taux d'enracinement. Aucun changement serveur. Voir [[features/plant-lifecycle]].
+
+### Files modified
+- `frontend/src/components/culture/PlantesTab.tsx`
+
 ## [2026-10-18] Bugfix | Volumes d'arrosage saisissables au millilitre
 
 Constat de Pik : impossible de saisir 0,2 L dans « Volume total à arroser » (arrosage engrais via recette), le navigateur imposait un multiple de 0,5 L. Cause : attribut `step={0.5}` sur les inputs `number` (validation HTML5). Correction validée : `step={0.001}` sur les 4 champs de volume d'`ArrosageModal` (eau pure, engrais via recette, volume utilisé, volume TCO à préparer). Aucune limite côté serveur. Le volume des pots reste au pas de 0,5 L.

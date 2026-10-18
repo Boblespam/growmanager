@@ -1,1 +1,9 @@
-fix: volumes d'arrosage saisissables au millilitre (step 0.001 au lieu de 0.5)
+feat: bouton « Enracinement échoué » sur les boutures en attente d'enracinement
+
+Ajoute sur la carte plante (onglet Plantes du suivi de culture) un bouton
+pour déclarer un clone ou une bouture externe mort, avec confirmation.
+Utilise l'endpoint existant clone-rate : statut abandonne + statut_clone rate,
+la plante reste en base pour les statistiques d'enracinement.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_011bKu799anjm5dGUeUDbprX

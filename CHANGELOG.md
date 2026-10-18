@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.11.0] - 2026-10-18
+
+### Ajouté
+- **Bouton « Enracinement échoué » sur les boutures** : dans l'onglet Plantes du suivi de culture, un clone (ou une bouture externe) en attente d'enracinement affiche désormais un bouton « Enracinement échoué » à côté de « Valider l'enracinement », avec confirmation. La plante passe en « Abandonnée » avec le badge « N'a pas pris » et reste comptée comme bouture ratée pour les statistiques d'enracinement. Cette option n'était jusqu'ici accessible qu'à la création du clone ou dans le panneau caché de validation.
+
+---
+
 ## [3.10.2] - 2026-10-18
 
 ### Corrigé
