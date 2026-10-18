@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-18] Feature | Tuile « En croissance » dans la barre d'info du détail culture
+
+Demande de Pik, validée. Nouvelle tuile entre « Plantes actives » et « En floraison » : durée de croissance = de `date_debut_croissance` (action « Début croissance ») jusqu'au passage en floraison (`date_debut_floraison` sinon `date_passage_12_12`), ou aujourd'hui tant que la culture n'est pas en floraison. `date_debut_croissance` ajouté à la réponse du détail culture (serveur + local) et au type `Culture`. Grille passée à 7 colonnes en `xl`. Voir [[frontend/pages]].
+
+### Files modified
+- `backend/app/routers/cultures.py`, `frontend/src/local/handlers/cultures-helpers.ts`, `frontend/src/api/cultures.ts`, `frontend/src/pages/Culture.tsx`
+
 ## [2026-10-13] Feature | Tri alphabétique de toutes les listes paramétrables
 
 Demande de Pik, validée telle quelle (y compris pour les listes à ordre logique : périodes de recette, états du matériel). Tri centralisé dans `parametresAPI.getList()` (`api/parametres.ts`) : `Intl.Collator('fr', { sensitivity: 'base', numeric: true })`, donc couvre le hook `useParametreListe`, Paramétrage et les appels directs (NouvellerCultureModal, PreparationSubstrat), en mode serveur comme en mode local. Helpers exportés `compareValeurs` / `trierValeurs`, utilisés aussi pour les unions de valeurs (filtres Matériel, pastilles compatibilités vapo, valeur hors liste dans `SelectWithAdd`). Le champ `ordre` n'est plus utilisé pour l'affichage.

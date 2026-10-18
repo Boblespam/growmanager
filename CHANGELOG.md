@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.10.0] - 2026-10-18
+
+### Ajouté
+- **Tuile « En croissance » sur la page de suivi de culture** : nombre de jours depuis le passage en croissance (action « Début croissance »). Le compteur avance tant que la culture n'est pas en floraison, puis s'arrête au passage en floraison et affiche la durée totale de croissance.
+
+---
+
 ## [3.9.0] - 2026-10-13
 
 ### Modifié

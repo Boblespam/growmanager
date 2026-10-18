@@ -19,6 +19,7 @@ export interface Culture {
   statut?: 'active' | 'sechage_curing' | 'terminee'
   date_debut?: string
   date_fin?: string
+  date_debut_croissance?: string
   date_passage_12_12?: string
   date_debut_floraison?: string
   date_debut_flush?: string

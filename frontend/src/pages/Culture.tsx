@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, ArrowLeft, Leaf, Calendar, Users, BarChart2,
   Flower2, Droplets, Sun, Clock, X, CheckCircle, Trash2, AlertTriangle, Loader2,
-  Pencil, Check, Camera, FileDown, MapPin,
+  Pencil, Check, Camera, FileDown, MapPin, Sprout,
 } from 'lucide-react'
 import { cultureAPI, Culture, CultureWithDetails, CultureCreate, CultureEmplacement } from '../api/cultures'
 import { photosAPI } from '../api/photos'
@@ -649,10 +649,19 @@ function CultureDetail({ cultureId, onBack }: { cultureId: number; onBack: () =>
       </div>
 
       {/* Info bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
         {[
           { icon: Clock,  label: 'Jours',          value: culture.jours_culture != null ? `${culture.jours_culture}j` : '—' },
           { icon: Users,  label: 'Plantes actives', value: `${culture.nb_plantes_actives}/${culture.nb_plantes}` },
+          { icon: Sprout, label: 'En croissance',   value: (() => {
+              // Du passage en croissance jusqu'au passage en floraison (ou aujourd'hui si pas encore)
+              const debut = culture.date_debut_croissance
+              if (!debut) return '—'
+              const fin = culture.date_debut_floraison || culture.date_passage_12_12
+              const finMs = fin ? new Date(fin.slice(0, 10) + 'T12:00').getTime() : Date.now()
+              const j = Math.floor((finMs - new Date(debut.slice(0, 10) + 'T12:00').getTime()) / (1000 * 60 * 60 * 24))
+              return j >= 0 ? `${j}j` : '—'
+            })() },
           { icon: Sun,    label: 'En floraison',    value: (() => {
               const base = culture.date_debut_floraison || culture.date_passage_12_12
               if (!base) return '—'

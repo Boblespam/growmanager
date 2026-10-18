@@ -1,7 +1,8 @@
-feat: tri alphabétique de toutes les listes paramétrables
+feat: tuile « En croissance » sur la page de suivi de culture
 
-- Tri français centralisé dans parametresAPI.getList (insensible casse/accents, nombres en ordre naturel)
-- Appliqué aux listes déroulantes, à l'écran Paramétrage, aux filtres Matériel et aux compatibilités vapo
+- Durée de croissance : du passage en croissance jusqu'au passage en floraison (ou aujourd'hui)
+- date_debut_croissance renvoyée par le détail culture (serveur + mode local)
+- Barre d'info passée à 7 tuiles
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_013FUz1YHLp8jVfDjkP9UKG5
+Claude-Session: https://claude.ai/code/session_01T5NBuk1HjS9T627tbfQvrM

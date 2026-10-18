@@ -194,6 +194,7 @@ export async function enrichCulture(culture: Row): Promise<Row> {
     statut: culture.statut,
     date_debut: culture.date_debut,
     date_fin: culture.date_fin,
+    date_debut_croissance: culture.date_debut_croissance,
     date_passage_12_12: culture.date_passage_12_12,
     date_debut_floraison: culture.date_debut_floraison,
     date_recolte_estimee: culture.date_recolte_estimee,
