@@ -197,6 +197,23 @@ def _enrich_culture(culture: Culture, db: Session) -> dict:
             last_tco_date = date.fromisoformat(last_tco_date)
         jours_depuis_tco = (date.today() - last_tco_date).days
 
+    # Début de croissance : champ culture, sinon 1re action « debut_croissance » du calendrier
+    date_debut_croissance = culture.date_debut_croissance
+    if not date_debut_croissance:
+        first_croissance = (
+            db.query(ActionCalendrier)
+            .filter(
+                ActionCalendrier.id_culture == culture.id_culture,
+                ActionCalendrier.type_action == "debut_croissance",
+            )
+            .order_by(ActionCalendrier.date_action.asc())
+            .first()
+        )
+        if first_croissance:
+            date_debut_croissance = first_croissance.date_action
+            if isinstance(date_debut_croissance, str):
+                date_debut_croissance = date.fromisoformat(date_debut_croissance[:10])
+
     # Calcul de la fenêtre de récolte : première date (min des duree_flo_min) et
     # dernière date (max des duree_flo_max) parmi toutes les plantes de la culture.
     date_recolte_min: Optional[date] = None
@@ -227,7 +244,7 @@ def _enrich_culture(culture: Culture, db: Session) -> dict:
         "statut": culture.statut,
         "date_debut": culture.date_debut,
         "date_fin": culture.date_fin,
-        "date_debut_croissance": culture.date_debut_croissance,
+        "date_debut_croissance": date_debut_croissance,
         "date_passage_12_12": culture.date_passage_12_12,
         "date_debut_floraison": culture.date_debut_floraison,
         "date_recolte_estimee": culture.date_recolte_estimee,

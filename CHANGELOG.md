@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.10.1] - 2026-10-18
+
+### Corrigé
+- **Tuile « En croissance » toujours vide** (3.10.0) : la date de début de croissance était filtrée par le serveur avant d'arriver à la page. Elle est maintenant transmise, avec repli sur l'action « Début croissance » du calendrier si la date n'est pas enregistrée sur la culture.
+
+---
+
 ## [3.10.0] - 2026-10-18
 
 ### Ajouté

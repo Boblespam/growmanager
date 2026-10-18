@@ -203,6 +203,7 @@ class CultureRead(BaseModel):
     statut: Optional[str] = None
     date_debut: Optional[date] = None
     date_fin: Optional[date] = None
+    date_debut_croissance: Optional[date] = None
     date_passage_12_12: Optional[date] = None
     date_debut_floraison: Optional[date] = None
     date_debut_flush: Optional[date] = None

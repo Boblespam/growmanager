@@ -1,8 +1,7 @@
-feat: tuile « En croissance » sur la page de suivi de culture
+fix: tuile « En croissance » vide sur la page de suivi de culture
 
-- Durée de croissance : du passage en croissance jusqu'au passage en floraison (ou aujourd'hui)
-- date_debut_croissance renvoyée par le détail culture (serveur + mode local)
-- Barre d'info passée à 7 tuiles
+- date_debut_croissance ajoutée au schéma CultureRead (filtrée par response_model)
+- Repli sur la 1re action « Début croissance » du calendrier si le champ culture est vide (serveur + mode local)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01T5NBuk1HjS9T627tbfQvrM

@@ -163,6 +163,16 @@ export async function enrichCulture(culture: Row): Promise<Row> {
      ORDER BY date_action DESC LIMIT 1`, [culture.id_culture])
   const joursTco = lastTco ? daysBetween(asDate(lastTco.date_action)!, today) : null
 
+  // Début de croissance : champ culture, sinon 1re action « debut_croissance » du calendrier
+  let dateDebutCroissance = asDate(culture.date_debut_croissance)
+  if (!dateDebutCroissance) {
+    const firstCroissance = await one<Row>(
+      `SELECT date_action FROM "ActionCalendrier"
+       WHERE id_culture = ? AND type_action = 'debut_croissance'
+       ORDER BY date_action ASC LIMIT 1`, [culture.id_culture])
+    dateDebutCroissance = firstCroissance ? asDate(firstCroissance.date_action) : null
+  }
+
   // Fenêtre de récolte (min des duree_flo_min / max des duree_flo_max)
   let dateRecolteMin: string | null = null
   let dateRecolteMax: string | null = null
@@ -194,7 +204,7 @@ export async function enrichCulture(culture: Row): Promise<Row> {
     statut: culture.statut,
     date_debut: culture.date_debut,
     date_fin: culture.date_fin,
-    date_debut_croissance: culture.date_debut_croissance,
+    date_debut_croissance: dateDebutCroissance,
     date_passage_12_12: culture.date_passage_12_12,
     date_debut_floraison: culture.date_debut_floraison,
     date_recolte_estimee: culture.date_recolte_estimee,

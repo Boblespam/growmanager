@@ -10,8 +10,10 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 Demande de Pik, validée. Nouvelle tuile entre « Plantes actives » et « En floraison » : durée de croissance = de `date_debut_croissance` (action « Début croissance ») jusqu'au passage en floraison (`date_debut_floraison` sinon `date_passage_12_12`), ou aujourd'hui tant que la culture n'est pas en floraison. `date_debut_croissance` ajouté à la réponse du détail culture (serveur + local) et au type `Culture`. Grille passée à 7 colonnes en `xl`. Voir [[frontend/pages]].
 
+**Correctif avant livraison** (constat de Pik : tuile vide) : `date_debut_croissance` manquait dans le schéma Pydantic `CultureRead`, donc filtré par `response_model` du `GET /api/cultures/{id}`. Ajouté au schéma. Fallback dans `_enrich_culture` / `enrichCulture` : si le champ culture est vide, date de la 1re action `debut_croissance` du calendrier.
+
 ### Files modified
-- `backend/app/routers/cultures.py`, `frontend/src/local/handlers/cultures-helpers.ts`, `frontend/src/api/cultures.ts`, `frontend/src/pages/Culture.tsx`
+- `backend/app/routers/cultures.py`, `backend/app/schemas/culture.py`, `frontend/src/local/handlers/cultures-helpers.ts`, `frontend/src/api/cultures.ts`, `frontend/src/pages/Culture.tsx`
 
 ## [2026-10-13] Feature | Tri alphabétique de toutes les listes paramétrables
 
