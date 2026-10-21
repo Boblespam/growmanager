@@ -173,6 +173,8 @@ Fertilizer product stock tracking.
 Equipment inventory by category.
 - Age, purchase date, characteristics
 - NouveauMaterielModal
+- **Vue Liste / Groupé** (2026-10-21) : la vue groupée regroupe les items par nom de base (`baseNom()` = texte avant le `#`, insensible à la casse). En-tête de groupe = nom + badge compteur + marques + prix moyen ; lignes dépliées = `ItemRow nested` (mêmes colonnes triables que la vue liste). Groupes triés alphabétiquement, items en ordre naturel, sauf si un tri de colonne est actif.
+- **Pagination client** (2026-10-21) : 25 lignes par défaut, sélecteur 25/50/100/Tout en pied de tableau, mémorisé en `localStorage` (`gm.materiel.pageSize.v2`). En vue groupée la pagination porte sur les groupes. Reset en page 1 sur changement de filtre, recherche, tri ou vue. Le chargement n'attend que la requête de l'onglet actif (Matériel ou Vaporisateurs).
 
 **NouveauMaterielModal — Création en lot (2026-05-18)** : toutes les catégories supportent désormais la création multiple via un sélecteur de quantité (1–99) affiché dès qu'une catégorie est choisie en mode création. Comportements :
 - **Sélecteur quantité** visible pour toutes les catégories (était limité à Bocaux/Pots).

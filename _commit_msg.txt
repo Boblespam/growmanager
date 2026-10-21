@@ -1,9 +1,10 @@
-feat: bouton « Enracinement échoué » sur les boutures en attente d'enracinement
+fix: vue groupée Matériel par nom de base (avant le #) + pagination 25 par défaut
 
-Ajoute sur la carte plante (onglet Plantes du suivi de culture) un bouton
-pour déclarer un clone ou une bouture externe mort, avec confirmation.
-Utilise l'endpoint existant clone-rate : statut abandonne + statut_clone rate,
-la plante reste en base pour les statistiques d'enracinement.
+- Regroupement sur le nom avant le « # », insensible à la casse (un groupe par item auparavant)
+- Groupes triés alphabétiquement, items en ordre naturel, colonnes triables comme en vue liste
+- Confirmation de suppression dans les groupes (réutilisation de ItemRow)
+- Pagination client 25/50/100/Tout, 25 par défaut, mémorisée dans le navigateur
+- Le chargement n'attend que la requête de l'onglet actif
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_011bKu799anjm5dGUeUDbprX
+Claude-Session: https://claude.ai/code/session_01UFEaghXjCCKghtt8fh1eKW

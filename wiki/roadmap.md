@@ -161,6 +161,9 @@ Bouton "Export PDF" dans le header de `/calendrier` · modal date début + date 
 ### Maillages Polinator paramétrables ✅ DONE — validé 2026-05-15
 `maillages_polinator` ajouté dans `ParametreListeValeur` (section "Stock — Maillages" de Parametrage.tsx). `NouvelleHashModal.tsx` : le champ maillage Polinator (anciennement fixe à 120µ) est désormais un `<select>` dynamique chargé depuis `useParametreListe('maillages_polinator')` (fallback `['120µ']`). Colonne `maillage_polinator VARCHAR(20) NULL` ajoutée à `HashExtraction` (migration automatique dans `run_migrations()`, `main.py`).
 
+### Page Matériel : vue groupée par nom de base + pagination ✅ DONE — validé 2026-10-21
+Groupement sur le nom avant le `#` (était un groupe par item). Pagination 25 par défaut (25/50/100/Tout, mémorisée). Détail : [[log]] 2026-10-21.
+
 ### Listes déroulantes Matériel + Vaporisateurs paramétrables ✅ DONE — validé 2026-10-13
 8 nouvelles listes (catégories, états, chauffe, batterie, charge, compatibilités, types et matières de consommable). Catégories de base verrouillées 🔒, catégories libres possibles (champs communs). Session vapo sur `types_stock`. Composant partagé `SelectWithAdd`. Détail : [[log]] 2026-10-13.
 

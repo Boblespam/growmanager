@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, ArrowUpDown, Pencil, Trash2, Loader2, AlertTriangle,
-  ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, Wrench, Euro, Hash, Tag, Wind,
+  ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, ChevronLeft, Wrench, Euro, Hash, Tag, Wind,
   Thermometer, Battery, Zap, Droplets, Package,
 } from 'lucide-react'
 import { materielAPI } from '../api/materiel'
@@ -29,6 +29,23 @@ function fmtAge(days: number | null) {
   const y = Math.floor(days / 365)
   const m = Math.floor((days % 365) / 30)
   return `${y} an${y > 1 ? 's' : ''}${m > 0 ? ` ${m} mois` : ''}`
+}
+
+/** Nom de base d'un item : tout ce qui précède le « # » (ex. « Bocal 1L Weck #3 » → « Bocal 1L Weck ») */
+function baseNom(nom: string): string {
+  return nom.split('#')[0].replace(/\s+/g, ' ').trim() || nom.trim()
+}
+const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' })
+
+const PAGE_SIZES = [25, 50, 100, 0] as const   // 0 = tout afficher
+const PAGE_SIZE_KEY = 'gm.materiel.pageSize.v2'
+function loadPageSize(): number {
+  try {
+    const raw = localStorage.getItem(PAGE_SIZE_KEY)
+    if (raw == null) return 25          // Number(null) vaudrait 0 = « Tout »
+    const v = Number(raw)
+    return (PAGE_SIZES as readonly number[]).includes(v) ? v : 25
+  } catch { return 25 }
 }
 
 function formatCaract(c: Record<string, unknown> | null, categorie: string): string {
@@ -84,11 +101,12 @@ const CAT_ICONS: Record<string, string> = {
 
 // ── Ligne d'item ─────────────────────────────────────────────────────────────
 function ItemRow({
-  item, onEdit, onDeleted,
+  item, onEdit, onDeleted, nested = false,
 }: {
   item: Materiel
   onEdit: () => void
   onDeleted: () => void
+  nested?: boolean
 }) {
   const [confirm, setConfirm] = useState(false)
   const qc = useQueryClient()
@@ -124,10 +142,12 @@ function ItemRow({
   const caract = formatCaract(item.caracteristiques as Record<string, unknown> | null, item.categorie)
 
   return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 group">
-      <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500 font-mono">#{item.id_materiel}</td>
-      <td className="px-3 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-100">
-        <span className="mr-1">{CAT_ICONS[item.categorie] ?? '📦'}</span>
+    <tr className={`group ${nested
+      ? 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700/40 border-l-4 border-blue-100 dark:border-blue-900'
+      : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}>
+      <td className={`px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500 font-mono ${nested ? 'pl-6' : ''}`}>#{item.id_materiel}</td>
+      <td className={`px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 ${nested ? 'pl-6' : 'font-medium'}`}>
+        {!nested && <span className="mr-1">{CAT_ICONS[item.categorie] ?? '📦'}</span>}
         {item.nom}
       </td>
       <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">{item.marque || '—'}</td>
@@ -158,11 +178,11 @@ function ItemRow({
   )
 }
 
-// ── Groupe de catégorie (vue groupée) ─────────────────────────────────────────
+// ── Groupe d'items de même nom de base (vue groupée) ─────────────────────────
 function GroupRow({
-  nom, marque, categorie, count, avgPrix, items, onEdit, onDeleted,
+  nom, marques, categorie, count, avgPrix, items, onEdit, onDeleted,
 }: {
-  nom: string; marque: string | null; categorie: string; count: number
+  nom: string; marques: string[]; categorie: string; count: number
   avgPrix: number | null; items: Materiel[]
   onEdit: (item: Materiel) => void; onDeleted: () => void
 }) {
@@ -170,54 +190,28 @@ function GroupRow({
   return (
     <>
       <tr className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500 font-mono w-8">
+        <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500 w-8">
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </td>
         <td className="px-3 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-100">
           <span className="mr-1">{CAT_ICONS[categorie] ?? '📦'}</span>
           {nom}
-        </td>
-        <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">{marque || '—'}</td>
-        <td className="px-3 py-2.5">
-          <span className="inline-flex items-center gap-1 bg-grow-100 text-grow-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+          <span className="ml-2 inline-flex items-center gap-1 bg-grow-100 text-grow-700 text-xs font-semibold px-2 py-0.5 rounded-full align-middle">
             <Hash size={10} /> {count}
           </span>
         </td>
-        <td className="px-3 py-2.5 text-xs text-gray-400 dark:text-gray-500" colSpan={2}>
+        <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">{marques.length ? marques.join(', ') : '—'}</td>
+        <td colSpan={2} />
+        <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400 text-right whitespace-nowrap">
           {avgPrix != null ? `moy. ${avgPrix.toFixed(2)} €` : '—'}
         </td>
         <td colSpan={4} />
       </tr>
       {open && items.map(item => (
-        <tr key={item.id_materiel} className="hover:bg-blue-50 group bg-white dark:bg-gray-800 border-l-4 border-blue-100">
-          <td className="px-3 py-2 text-xs text-gray-300 font-mono pl-8">#{item.id_materiel}</td>
-          <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300 pl-6">
-            S/N: {item.code_barre_serial || '—'}
-          </td>
-          <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">{fmtDate(item.date_achat)}</td>
-          <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 text-right">
-            {item.prix_achat != null ? `${Number(item.prix_achat).toFixed(2)} €` : '—'}
-          </td>
-          <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">{fmtAge(item.age_jours)}</td>
-          <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[180px] truncate"
-              title={formatCaract(item.caracteristiques as Record<string, unknown> | null, item.categorie)}>
-            {formatCaract(item.caracteristiques as Record<string, unknown> | null, item.categorie) || '—'}
-          </td>
-          <td className="px-3 py-2">
-            {item.etat
-              ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ETAT_COLORS[item.etat] ?? 'bg-gray-100 text-gray-600 dark:text-gray-300'}`}>{item.etat}</span>
-              : null}
-          </td>
-          <td className="px-3 py-2 text-right" colSpan={2}>
-            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onClick={() => onEdit(item)}
-                className="p-1 text-gray-400 dark:text-gray-500 hover:text-grow-600 hover:bg-grow-50 rounded"><Pencil size={12} /></button>
-              <button onClick={() => {
-                materielAPI.delete(item.id_materiel).then(onDeleted)
-              }} className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 rounded"><Trash2 size={12} /></button>
-            </div>
-          </td>
-        </tr>
+        <ItemRow key={item.id_materiel} item={item} nested
+          onEdit={() => onEdit(item)}
+          onDeleted={onDeleted}
+        />
       ))}
     </>
   )
@@ -408,6 +402,15 @@ export default function MaterielPage() {
   const [vapoSearch,   setVapoSearch]   = useState('')
   const [sortCol,      setSortCol]      = useState<SortColMateriel | null>(null)
   const [sortDir,      setSortDir]      = useState<SortDirM>('asc')
+  const [pageSize,     setPageSize]     = useState<number>(loadPageSize)
+  const [page,         setPage]         = useState(1)
+
+  const changePageSize = (n: number) => {
+    setPageSize(n)
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(n)) } catch { /* stockage indisponible */ }
+  }
+  // Retour en page 1 dès que la sélection change
+  useEffect(() => { setPage(1) }, [catFilter, etatFilter, search, viewMode, sortCol, sortDir, pageSize])
 
   const handleSort = (col: SortColMateriel) => {
     if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -484,23 +487,38 @@ export default function MaterielPage() {
     })
   }, [items, catFilter, etatFilter, search, sortCol, sortDir])
 
-  // ── Groupement (vue groupée) ───────────────────────────────────────────────
+  // ── Groupement (vue groupée) : même nom avant le « # » ────────────────────
   const grouped = useMemo(() => {
     const map = new Map<string, Materiel[]>()
     filtered.forEach(item => {
-      const key = `${item.categorie}||${item.nom}||${item.marque ?? ''}`
+      const key = baseNom(item.nom).toLowerCase()
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(item)
     })
-    return [...map.entries()].map(([key, its]) => {
-      const [categorie, nom, marque] = key.split('||')
+    const groups = [...map.entries()].map(([key, its]) => {
+      // Sans tri explicite : items du groupe dans l'ordre naturel (#2 avant #10)
+      const sorted = sortCol ? its : [...its].sort((a, b) => collator.compare(a.nom, b.nom))
       const withPrix = its.filter(i => i.prix_achat != null)
       const avgPrix  = withPrix.length
         ? withPrix.reduce((s, i) => s + Number(i.prix_achat), 0) / withPrix.length
         : null
-      return { key, categorie, nom, marque: marque || null, count: its.length, avgPrix, items: its }
+      const marques = [...new Set(its.map(i => (i.marque ?? '').trim()).filter(Boolean))]
+      return {
+        key, nom: baseNom(its[0].nom), categorie: its[0].categorie, marques,
+        count: its.length, avgPrix, items: sorted,
+      }
     })
-  }, [filtered])
+    return sortCol ? groups : groups.sort((a, b) => collator.compare(a.nom, b.nom))
+  }, [filtered, sortCol])
+
+  // ── Pagination (lignes en vue liste, groupes en vue groupée) ──────────────
+  const totalRows  = viewMode === 'liste' ? filtered.length : grouped.length
+  const pageCount  = pageSize > 0 ? Math.max(1, Math.ceil(totalRows / pageSize)) : 1
+  const curPage    = Math.min(page, pageCount)
+  const sliceStart = pageSize > 0 ? (curPage - 1) * pageSize : 0
+  const sliceEnd   = pageSize > 0 ? sliceStart + pageSize : totalRows
+  const pageItems  = useMemo(() => filtered.slice(sliceStart, sliceEnd), [filtered, sliceStart, sliceEnd])
+  const pageGroups = useMemo(() => grouped.slice(sliceStart, sliceEnd), [grouped, sliceStart, sliceEnd])
 
   const filteredVapos = useMemo(() => {
     if (!vapoSearch) return vapos
@@ -512,7 +530,7 @@ export default function MaterielPage() {
     )
   }, [vapos, vapoSearch])
 
-  if (isLoading || vaposLoading) return <LoadingSpinner />
+  if (activeTab === 'materiel' ? isLoading : vaposLoading) return <LoadingSpinner />
 
   return (
     <div className="space-y-6">
@@ -615,7 +633,7 @@ export default function MaterielPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                  {viewMode === 'liste' ? (
+                  {(
                     <>
                       <th
                         onClick={() => handleSort('id')}
@@ -644,28 +662,20 @@ export default function MaterielPage() {
                       ))}
                       <th className="px-3 py-2.5"></th>
                     </>
-                  ) : (
-                    <>
-                      <th className="px-3 py-2.5 w-8"></th>
-                      <th className="px-3 py-2.5 text-left">Nom</th>
-                      <th className="px-3 py-2.5 text-left">Marque</th>
-                      <th className="px-3 py-2.5 text-left">Qté</th>
-                      <th className="px-3 py-2.5 text-left" colSpan={6}>Prix moyen</th>
-                    </>
                   )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {viewMode === 'liste'
-                  ? filtered.map(item => (
+                  ? pageItems.map(item => (
                       <ItemRow key={item.id_materiel} item={item}
                         onEdit={() => { setEditItem(item); setShowModal(true) }}
                         onDeleted={invalidate}
                       />
                     ))
-                  : grouped.map(g => (
+                  : pageGroups.map(g => (
                       <GroupRow key={g.key}
-                        nom={g.nom} marque={g.marque} categorie={g.categorie}
+                        nom={g.nom} marques={g.marques} categorie={g.categorie}
                         count={g.count} avgPrix={g.avgPrix} items={g.items}
                         onEdit={item => { setEditItem(item); setShowModal(true) }}
                         onDeleted={invalidate}
@@ -678,9 +688,36 @@ export default function MaterielPage() {
         )}
 
         {filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-            {filtered.length} élément{filtered.length > 1 ? 's' : ''}
-            {catFilter !== 'all' && ` · ${catFilter}`}
+          <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 flex flex-wrap items-center gap-3">
+            <span>
+              {filtered.length} élément{filtered.length > 1 ? 's' : ''}
+              {viewMode === 'groupe' && ` · ${grouped.length} groupe${grouped.length > 1 ? 's' : ''}`}
+              {catFilter !== 'all' && ` · ${catFilter}`}
+              {pageSize > 0 && totalRows > pageSize &&
+                ` · ${sliceStart + 1}–${Math.min(sliceEnd, totalRows)} sur ${totalRows}`}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <label className="flex items-center gap-1">
+                Afficher
+                <select value={pageSize} onChange={e => changePageSize(Number(e.target.value))}
+                  className="text-xs border border-gray-200 dark:border-gray-700 rounded-md px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                  {PAGE_SIZES.map(n => <option key={n} value={n}>{n === 0 ? 'Tout' : n}</option>)}
+                </select>
+              </label>
+              {pageCount > 1 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(Math.max(1, curPage - 1))} disabled={curPage <= 1}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title="Page précédente">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="tabular-nums">{curPage} / {pageCount}</span>
+                  <button onClick={() => setPage(Math.min(pageCount, curPage + 1))} disabled={curPage >= pageCount}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30" title="Page suivante">
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

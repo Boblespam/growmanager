@@ -17,6 +17,16 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.11.1] - 2026-10-21
+
+### Corrigé
+- **Vue « Groupé » de la page Matériel** : les items sont désormais regroupés par nom de base (tout ce qui précède le « # », ex. « Bocal 1L Weck #1 / #2 / #12 » → un seul groupe « Bocal 1L Weck »), sans tenir compte de la casse. Auparavant chaque item formait son propre groupe. Groupes triés alphabétiquement, items en ordre naturel (#2 avant #10), mêmes colonnes triables qu'en vue liste, marques du groupe affichées. La suppression depuis un groupe demande maintenant une confirmation.
+
+### Ajouté
+- **Pagination de la page Matériel** : 25 lignes par défaut (25 / 50 / 100 / Tout), choix mémorisé dans le navigateur. En vue groupée, la pagination porte sur les groupes. Retour en page 1 à chaque changement de filtre, recherche, tri ou vue. L'onglet Matériel n'attend plus le chargement des vaporisateurs (et inversement).
+
+---
+
 ## [3.11.0] - 2026-10-18
 
 ### Ajouté

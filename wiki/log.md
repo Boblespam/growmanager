@@ -6,6 +6,13 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-21] Fix + Feature | Page Matériel : vue groupée par nom de base + pagination
+
+Constat de Pik : la vue « Groupé » ne groupait rien (un groupe par item) et la page devenait lente avec beaucoup de matériel. Cause : clé de groupement `categorie||nom||marque` avec le nom complet, donc incluant le `#N`. Correction validée : clé = `baseNom(nom)` (texte avant le `#`, espaces normalisés, insensible à la casse). Groupes triés alphabétiquement (`Intl.Collator` numérique), items en ordre naturel ; si un tri de colonne est actif, il prime. La vue groupée reprend les colonnes triables de la vue liste ; les lignes dépliées réutilisent `ItemRow` (prop `nested`), ce qui ajoute la confirmation de suppression. Ralentissement : le backend `GET /api/materiel` est une simple requête, le coût venait du rendu de toutes les lignes. Ajout d'une pagination côté client : 25 par défaut, sélecteur 25/50/100/Tout mémorisé en `localStorage` (`gm.materiel.pageSize.v2`, accès en try/catch ; bug corrigé avant livraison : `Number(null)` = 0 = « Tout » au premier chargement). Pagination par groupe en vue groupée, reset en page 1 sur changement de filtre/recherche/tri/vue. Le spinner ne bloque plus que sur la requête de l'onglet actif. L'onglet Vaporisateurs (cartes) n'est pas concerné. Voir [[frontend/pages]].
+
+### Files modified
+- `frontend/src/pages/Materiel.tsx`
+
 ## [2026-10-18] Feature | Bouton « Enracinement échoué » sur la carte bouture
 
 Constat de Pik : sur un clone en attente, aucun bouton visible pour le déclarer mort (le « Raté ❌ » n'existait qu'à la création du clone, ou caché dans le panneau ouvert par « Valider l'enracinement »). Ajout validé : bouton rouge « Enracinement échoué » à côté de « Valider l'enracinement » dans `PlantCard`, avec confirmation inline « Déclarer morte ? Oui / Non ». Appelle l'endpoint existant `PATCH .../clone-rate` (`statut_clone = 'rate'`, `statut = 'abandonne'`) : la plante reste en base dans « Terminées », exploitable pour les stats de taux d'enracinement. Aucun changement serveur. Voir [[features/plant-lifecycle]].
