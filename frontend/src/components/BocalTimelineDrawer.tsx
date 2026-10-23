@@ -8,6 +8,7 @@
  *   <BocalTimelineDrawer idMateriel={12} onClose={() => setOpen(false)} />
  */
 
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { X, Dna, Leaf, Archive, FlaskConical, Package, Calendar, Scale, Layers } from 'lucide-react'
 import { materielAPI } from '../api/materiel'
@@ -245,7 +246,7 @@ export default function BocalTimelineDrawer({ idMateriel, onClose }: Props) {
   const hasStock = (data?.stocks.length ?? 0) > 0
 
   return (
-    <>
+    createPortal(<>
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/40 z-40"
@@ -367,6 +368,6 @@ export default function BocalTimelineDrawer({ idMateriel, onClose }: Props) {
           )}
         </div>
       </div>
-    </>
+    </>, document.body)
   )
 }

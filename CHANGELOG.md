@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.13.1] - 2026-10-23
+
+### Corrigé
+- **Panneaux « Origine du stock » et « Origine du bocal » décalés vers le bas** (surtout visible sur Android) : le panneau descendait de 24 px, on voyait le menu de l'appli au-dessus et les boutons Modifier / Supprimer étaient coupés par la barre de navigation du téléphone. Les deux panneaux s'affichent maintenant en plein écran au-dessus de toute l'appli.
+
+---
+
 ## [3.13.0] - 2026-10-23
 
 ### Ajouté

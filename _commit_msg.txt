@@ -1,5 +1,5 @@
-feat: boutons Modifier et Supprimer en bas de la fiche d'un stock
+fix: drawers Origine stock et bocal décalés de 24 px (boutons coupés sur Android)
 
-Barre fixe en bas du panneau Origine du stock (sous les cultures), PC et Android : Modifier ouvre le formulaire d'édition, Supprimer demande confirmation. Évite le scroll horizontal du tableau pour atteindre les actions.
-
-Inclut aussi la doc wiki de l'étude multilingue FR/EN/DE/ES (i18n) : inventaire, architecture proposée, ADR-010 en brouillon, plan en sprints I0 à I4.
+- StockOriginDrawer et BocalTimelineDrawer rendus via createPortal vers document.body : la marge space-y-6 de la page ne les décale plus
+- Wiki : bug drawer-decale-space-y, règle portal dans frontend/conventions
+- package-lock.json frontend resynchronisé après npm install local (@capacitor/filesystem)

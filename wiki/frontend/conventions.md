@@ -112,6 +112,10 @@ Pattern à utiliser (ne pas muter le tableau original) :
 
 ---
 
+## Drawers et overlays plein écran
+
+Tout panneau `fixed` plein écran (drawer, overlay) doit être rendu via `createPortal(..., document.body)` (`react-dom`). S'il est rendu dans une page dont le conteneur a `space-y-*`, la marge s'applique aussi à l'élément `fixed` et le décale (voir [[bugs/drawer-decale-space-y]]). Déjà fait : `StockOriginDrawer`, `BocalTimelineDrawer`.
+
 ## See Also
 
 - [[frontend/frontend-overview]] — routing and component structure

@@ -6,6 +6,14 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-23] Fix | Drawers Origine stock / bocal décalés de 24 px
+
+Retour de Pik sur l'APK : le panneau Origine du stock laissait voir le header en haut et les nouveaux boutons du bas étaient coupés par la barre Android. Cause : marge `space-y-6` du parent appliquée au drawer `fixed`. Fix : `createPortal` vers `document.body` pour `StockOriginDrawer` et `BocalTimelineDrawer`. Validé par Pik. Voir [[bugs/drawer-decale-space-y]], règle dans [[frontend/conventions]].
+
+### Files modified
+- `frontend/src/components/StockOriginDrawer.tsx`, `frontend/src/components/BocalTimelineDrawer.tsx`
+- `wiki/bugs/drawer-decale-space-y.md` (nouveau), `wiki/frontend/conventions.md`, `CHANGELOG.md`
+
 ## [2026-10-23] Feature | Stock : Modifier / Supprimer en bas de la fiche origine
 
 Retour de Pik sur l'appli Android : sur la page Stock, les boutons d'action sont au bout de la ligne et il faut faire défiler le tableau vers la droite, donc on a tendance à toucher la ligne, ce qui ouvre la fiche origine sans moyen d'agir. Ajout d'un pied fixe dans `StockOriginDrawer` (sous les cultures) avec **Modifier** (prop `onEdit`, ouvre `NouveauStockModal`) et **Supprimer** (confirmation inline). Même code pour PC et APK. Validé par Pik.

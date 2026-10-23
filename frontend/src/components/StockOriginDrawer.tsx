@@ -11,6 +11,7 @@
  *   <StockOriginDrawer stockId={12} onClose={() => setOpen(false)} />
  */
 
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Dna, Leaf, Archive, Scale, Calendar, Package, GitBranch, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react'
@@ -201,7 +202,7 @@ export default function StockOriginDrawer({ stockId, onClose, onEdit }: Props) {
   })()
 
   return (
-    <>
+    createPortal(<>
       {/* Overlay */}
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
@@ -376,6 +377,6 @@ export default function StockOriginDrawer({ stockId, onClose, onEdit }: Props) {
           )}
         </div>
       </div>
-    </>
+    </>, document.body)
   )
 }
