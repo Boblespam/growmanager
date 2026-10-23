@@ -83,6 +83,24 @@ Constat 2026-10-23 : en mode serveur sur l'APK, les téléchargements (blob + `<
 
 ---
 
+## Multilingue FR / EN / DE / ES (étude validée 2026-10-23, non lancé)
+
+Motivation : recrutement des testeurs du test fermé Play bloqué par une app 100 % française. Étude complète, inventaire et architecture : [[features/i18n]]. ADR en brouillon : ADR-010 dans [[architecture/decisions]].
+
+**Avant de lancer** : trancher les 5 décisions de [[features/i18n#6. Décisions à trancher (reportées par Pik le 2026-10-23)|la section 6 de l'étude]] (fallback EN, unités impériales, backend Python en v1 ou non, démarrage I0 + I1 seuls).
+
+| Sprint | Contenu | État |
+|--------|---------|------|
+| I0 | Socle : ADR-010, glossaire, i18next, détection langue, sélecteur (ModeSetup + Paramétrage), helpers format, script parité des clés en CI, pseudo-langue | ⏳ à faire |
+| I1 | Parcours testeur en EN : nav, ModeSetup, Dashboard, Culture + composants culture, Graines, erreurs mode local, statuts/actions | ⏳ à faire |
+| I2 | Cœur métier : Stock, Séchage/Curing, Matériel, Espaces, Recettes, Sol vivant, Plan culture, Préparation substrat, listes paramétrables : seeds des valeurs libres dans la langue choisie + traduction à l'affichage des valeurs verrouillées/testées (tranché 2026-10-23) | ⏳ à faire |
+| I3 | Reste de l'UI : Parametrage, Croisement, Statistiques, Classement, Comparaison, Consommation, Vapo, Calendrier global + PDF | ⏳ à faire |
+| I4 | Traductions DE/ES + relecture native, débordements de texte, fiches Play EN/DE/ES, backend Python | ⏳ à faire |
+
+À corriger au passage : `android/.../values/strings.xml` a encore `app_name = "My App"`.
+
+---
+
 ## V4 Backlog — Bilan & Plan d'action (review 2026-05-10)
 
 Source : `Documentation/GrowManager_Specifications_v4.docx` + `Documentation/growmanager_roadmap_v4_review.html`
@@ -171,6 +189,9 @@ Bouton "Export PDF" dans le header de `/calendrier` · modal date début + date 
 
 ### Maillages Polinator paramétrables ✅ DONE — validé 2026-05-15
 `maillages_polinator` ajouté dans `ParametreListeValeur` (section "Stock — Maillages" de Parametrage.tsx). `NouvelleHashModal.tsx` : le champ maillage Polinator (anciennement fixe à 120µ) est désormais un `<select>` dynamique chargé depuis `useParametreListe('maillages_polinator')` (fallback `['120µ']`). Colonne `maillage_polinator VARCHAR(20) NULL` ajoutée à `HashExtraction` (migration automatique dans `run_migrations()`, `main.py`).
+
+### Stock : Modifier / Supprimer en bas de la fiche origine ✅ DONE — validé 2026-10-23
+Barre fixe en bas de `StockOriginDrawer` (sous les cultures d'origine) avec boutons Modifier et Supprimer, PC et Android. Évite le scroll horizontal du tableau pour atteindre les actions de ligne.
 
 ### Page Matériel : vue groupée par nom de base + pagination ✅ DONE — validé 2026-10-21
 Groupement sur le nom avant le `#` (était un groupe par item). Pagination 25 par défaut (25/50/100/Tout, mémorisée). Détail : [[log]] 2026-10-21.

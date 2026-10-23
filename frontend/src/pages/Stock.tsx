@@ -638,6 +638,10 @@ export default function StockPage() {
         <StockOriginDrawer
           stockId={origineStockId}
           onClose={() => setOrigineStockId(null)}
+          onEdit={() => {
+            const s = stocks.find(x => x.id_stock === origineStockId)
+            if (s) { setOrigineStockId(null); setEditStock(s) }
+          }}
         />
       )}
 

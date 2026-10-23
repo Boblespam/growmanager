@@ -6,6 +6,33 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-23] Feature | Stock : Modifier / Supprimer en bas de la fiche origine
+
+Retour de Pik sur l'appli Android : sur la page Stock, les boutons d'action sont au bout de la ligne et il faut faire défiler le tableau vers la droite, donc on a tendance à toucher la ligne, ce qui ouvre la fiche origine sans moyen d'agir. Ajout d'un pied fixe dans `StockOriginDrawer` (sous les cultures) avec **Modifier** (prop `onEdit`, ouvre `NouveauStockModal`) et **Supprimer** (confirmation inline). Même code pour PC et APK. Validé par Pik.
+
+### Files modified
+- `frontend/src/components/StockOriginDrawer.tsx`
+- `frontend/src/pages/Stock.tsx`
+- `wiki/frontend/pages.md`, `wiki/roadmap.md`, `CHANGELOG.md`
+
+## [2026-10-23] Décision | Multilingue : listes paramétrables créées dans la langue choisie
+
+Remplace la décision précédente. Après comparaison de l'effort, Pik retient : valeurs libres des listes créées directement dans la langue choisie au premier lancement (surcoût négligeable : ~100 valeurs à traduire une fois + `seeds.ts`), puis jamais retraduites. Valeurs verrouillées ou testées par le code : code français en base, traduites à l'affichage. Traduire toutes les valeurs à l'affichage est écarté (trop de points de code). Mis à jour : [[features/i18n]], ADR-010 dans [[architecture/decisions]], [[roadmap]].
+
+## [2026-10-23] Décision | Multilingue : listes paramétrables non traduites
+
+Pik tranche : les valeurs des listes déroulantes gérées depuis Paramétrage ne sont pas traduites (y compris les valeurs par défaut), l'utilisateur crée les siennes. Seules les valeurs verrouillées (ADR-009) sont traduites, à l'affichage uniquement. Point ouvert : verrouiller ou non les valeurs testées par le code mais non verrouillées (Hash, Rosin, Hors service, Récolte/Hunt/Reproduction, Autre). Mis à jour : [[features/i18n]], ADR-010 dans [[architecture/decisions]], [[roadmap]].
+
+## [2026-10-23] Étude | Multilingue FR / EN / DE / ES
+
+Pik peine à recruter les testeurs du test fermé Play parce que l'app n'existe qu'en français. Étude complète faite sans rien lancer : inventaire du code (~2 500 à 3 500 chaînes front, ~280 dans le backend local, ~210 erreurs + PDF/CSV côté Python, 93 formats de date en dur), architecture proposée (i18next, langue par appareil, fallback EN, option A pour les listes paramétrables), impacts et plan en 5 sprints I0 à I4. Étude validée par Pik, décisions reportées. Voir [[features/i18n]], ADR-010 (brouillon) dans [[architecture/decisions]], section dédiée dans [[roadmap]].
+
+### Files modified
+- `wiki/features/i18n.md` (nouveau)
+- `wiki/architecture/decisions.md` (ADR-010 brouillon)
+- `wiki/roadmap.md`
+- `wiki/index.md`
+
 ## [2026-10-23] Feature | Sauvegarde & restauration en mode autonome (sprint B7)
 
 Reprise de la Phase B avec Pik. Inventaire automatique (routes FastAPI vs `route()` du backend local) : 321 routes serveur, 98 absentes en autonome, dont 34 capteurs exclus volontairement. Plan B7→B10 validé, voir [[roadmap]]. Pik confirme que les téléchargements et le PDF fiche culture marchent déjà sur l'APK en mode serveur → réutilisation du même mécanisme (blob + `<a download>`).

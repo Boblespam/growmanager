@@ -1,11 +1,5 @@
-feat: sauvegarde et restauration en mode autonome (sprint B7)
+feat: boutons Modifier et Supprimer en bas de la fiche d'un stock
 
-- Sauvegarde .zip : toutes les tables de la base locale (JSON) + photos (option)
-- Restauration atomique : fichier contrôlé avant, une seule transaction, photos substituées à la fin
-- ZIP sans compression écrit maison (zip.ts), aucune dépendance ajoutée
-- Onglet Sauvegarde du Paramétrage réaffiché en mode autonome, textes adaptés
-- Adapter local : relaie les en-têtes (nom du fichier téléchargé)
-- Wiki : plan des finitions Phase B (B7 à B10), doc sauvegarde mobile
+Barre fixe en bas du panneau Origine du stock (sous les cultures), PC et Android : Modifier ouvre le formulaire d'édition, Supprimer demande confirmation. Évite le scroll horizontal du tableau pour atteindre les actions.
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01EsLMfq9ac44wpZdALUBZgw
+Inclut aussi la doc wiki de l'étude multilingue FR/EN/DE/ES (i18n) : inventaire, architecture proposée, ADR-010 en brouillon, plan en sprints I0 à I4.

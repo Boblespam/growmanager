@@ -77,6 +77,7 @@ Content catalog for the GrowManager development wiki. Read this first when start
 - [[features/photos]] — Galerie photos : photo globale culture vs photo de plante spécifique, upload, filtres, badges
 - [[features/mobile-app]] — App Android Capacitor : config, build APK CI, écran premier lancement, accès distant Tailscale
 - [[features/mobile-standalone]] — Mode autonome (Phase B) : SQLite embarqué, backend local TS, dual-mode, sauvegarde .zip, limites
+- [[features/i18n]] : Multilingue FR/EN/DE/ES : étude, inventaire, architecture et plan par sprints (planifié, non lancé)
 
 ---
 

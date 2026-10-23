@@ -104,4 +104,16 @@ sources: [Documentation/claude.md, Documentation/PHASE1_SUMMARY.txt]
 
 ---
 
+## ADR-010 : Multilingue i18n (brouillon 2026-10-23)
+
+**Statut:** proposé, non validé. Étude complète : [[features/i18n]]. Les points ouverts sont listés en section 6 de cette page.
+
+**Context:** L'app n'existe qu'en français, ce qui bloque le recrutement de testeurs étrangers pour le test fermé Google Play. Cibles : FR, EN, DE, ES.
+
+**Decision (proposée):** `i18next` + `react-i18next`, JSON des 4 langues embarqués dans l'APK. Langue stockée par appareil (`localStorage gm_lang`), pas en base. Source FR, fallback EN. Listes paramétrables (tranché par Pik le 2026-10-23) : valeurs libres créées dans la langue choisie au premier lancement puis traitées comme des données utilisateur (jamais retraduites) ; valeurs verrouillées ou testées par le code conservées en code français en base et traduites uniquement à l'affichage. Erreurs backend renvoyées sous forme de codes traduits côté front. Formats date/nombre centralisés dans un helper basé sur la langue active.
+
+**Consequence:** Plus aucune chaîne en dur dans l'UI : chaque nouveau texte doit avoir sa clé dans les 4 langues (contrôle de parité en CI). Ne jamais traduire une valeur stockée ou testée par égalité (complète l'ADR-009).
+
+---
+
 *Add new ADRs here as architectural decisions are made.*

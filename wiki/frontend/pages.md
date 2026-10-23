@@ -83,6 +83,7 @@ Finished product inventory.
 - Colonne Âge / Durée : affichage calendaire précis via `preciseDiffLabel()` (ex: "1 mois et 3 jours", "1 an, 3 mois et 2 jours", "< 1 jour") — gère fins de mois et années bissextiles
 - NouveauStockModal to add entries
 - `sortie` action to mark jar as consumed
+- Clic sur une ligne → `StockOriginDrawer` (origine du stock). Pied fixe en bas du panneau avec **Modifier** (ferme le drawer, ouvre `NouveauStockModal` en édition via la prop `onEdit`) et **Supprimer** (confirmation inline, invalide `['stock']` + `['stock-alerts']`, ferme le drawer). Padding `env(safe-area-inset-bottom)` pour Android. Ajouté 2026-10-23 car les boutons de ligne exigeaient un scroll horizontal sur mobile.
 
 ### Extractions (`/extractions`)
 Rosin press sessions.

@@ -11,8 +11,9 @@
  *   <StockOriginDrawer stockId={12} onClose={() => setOpen(false)} />
  */
 
-import { useQuery } from '@tanstack/react-query'
-import { X, Dna, Leaf, Archive, Scale, Calendar, Package, GitBranch } from 'lucide-react'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, Dna, Leaf, Archive, Scale, Calendar, Package, GitBranch, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react'
 import { stockAPI } from '../api/stock'
 import type { PlantOrigine, CultureSource } from '../api/stock'
 
@@ -165,9 +166,23 @@ function CultureCard({ culture }: { culture: CultureSource }) {
 interface Props {
   stockId: number
   onClose: () => void
+  /** Si fourni, affiche le bouton « Modifier » en bas du panneau */
+  onEdit?: () => void
 }
 
-export default function StockOriginDrawer({ stockId, onClose }: Props) {
+export default function StockOriginDrawer({ stockId, onClose, onEdit }: Props) {
+  const queryClient = useQueryClient()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const remove = useMutation({
+    mutationFn: () => stockAPI.delete(stockId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock'] })
+      queryClient.invalidateQueries({ queryKey: ['stock-alerts'] })
+      onClose()
+    },
+    onError: () => setConfirmDelete(false),
+  })
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['stock-origine', stockId],
     queryFn: () => stockAPI.origine(stockId).then(r => r.data),
@@ -309,6 +324,55 @@ export default function StockOriginDrawer({ stockId, onClose }: Props) {
                 </div>
               )}
             </>
+          )}
+        </div>
+
+        {/* Pied : actions Modifier / Supprimer (toujours visibles, pas de scroll horizontal) */}
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          {confirmDelete ? (
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                Supprimer définitivement ce stock
+                {data?.variete?.nom_variete ? <strong className="truncate">{data.variete.nom_variete}</strong> : null} ?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => remove.mutate()}
+                  disabled={remove.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-60"
+                >
+                  {remove.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Confirmer
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={remove.isPending}
+                  className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-grow-600 hover:bg-grow-700 text-white text-sm font-medium"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Modifier
+                </button>
+              )}
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="w-4 h-4" />
+                Supprimer
+              </button>
+            </div>
           )}
         </div>
       </div>

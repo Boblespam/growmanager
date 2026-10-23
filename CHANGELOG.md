@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.13.0] - 2026-10-23
+
+### Ajouté
+- **Boutons Modifier et Supprimer en bas de la fiche d'un stock** (appli Android et version PC) : quand on touche une ligne de stock, le panneau « Origine du stock » affiche maintenant en bas, sous les cultures, une barre fixe avec « Modifier » (ouvre le formulaire d'édition) et « Supprimer » (avec confirmation). Plus besoin de faire défiler le tableau vers la droite pour atteindre les petits boutons de la ligne, qui restent disponibles.
+
+---
+
 ## [3.12.0] - 2026-10-23
 
 ### Ajouté
