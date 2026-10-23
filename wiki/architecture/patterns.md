@@ -10,7 +10,7 @@ sources: [main.py, routers/cultures.py, Documentation/claude.md, push.bat, versi
 
 Tables are created via SQLAlchemy `metadata.create_all()` at startup.
 
-New columns are added via raw SQL in `run_migrations()` in `main.py`:
+New columns are added via raw SQL in `run_migrations()` in `app/db_init.py` (déplacé depuis `main.py` le 2026-10-23):
 
 ```python
 # Pattern: check INFORMATION_SCHEMA before altering
@@ -28,9 +28,9 @@ if result == 0:
 
 **Rule:** Never use Alembic. Every schema change goes through this pattern.
 
-**Seeds au démarrage :** ils tournent dans chacun des 2 workers en parallèle. Un seed doit être sûr en concurrence (contrainte unique + `INSERT IGNORE`, ou verrou nommé MySQL), pas seulement idempotent. Exemple : `ParametreListeValeur` (index `uq_parametre_liste_valeur`), voir [[bugs/parametres-doublons-seed-workers]].
+**Seeds au démarrage :** ils tournaient dans chacun des 2 workers en parallèle jusqu'au 2026-10-23 (voir ci-dessous). Par prudence, un seed doit rester sûr en concurrence (contrainte unique + `INSERT IGNORE`, ou verrou nommé MySQL), pas seulement idempotent. Exemple : `ParametreListeValeur` (index `uq_parametre_liste_valeur`), voir [[bugs/parametres-doublons-seed-workers]].
 
-**Piège connu — race condition multi-workers sur `create_all()` :** le backend prod tourne avec `uvicorn --workers 2` (`backend/Dockerfile.prod`). `Base.metadata.create_all()` (appelé à l'import de `main.py` et à nouveau dans `run_migrations()`) n'est pas protégé contre l'exécution concurrente : au premier démarrage après l'ajout d'une **nouvelle table**, les deux workers peuvent tenter de la créer en même temps → `(1050, "Table already exists")` sur l'un des deux, qui redémarre seul. Sans gravité (aucune perte de données) mais pas encore corrigé. Détail et pistes de fix : [[bugs/tapoconfig-migration-race]].
+**Init de la base une seule fois (depuis 2026-10-23) :** `create_all()`, `run_migrations()` et les seeds sont dans `backend/app/db_init.py`. En prod, `Dockerfile.prod` lance `python -m app.db_init` puis les 2 workers uvicorn avec `GM_SKIP_DB_INIT=1` : ils ne touchent plus au schéma. En dev (un seul process), `main.py` appelle `init_database()` lui-même. Toute nouvelle migration ou nouveau seed va dans `db_init.py`, jamais au niveau module de `main.py`. Historique : [[bugs/tapoconfig-migration-race]].
 
 ## 2. Router Enrichment Pattern
 

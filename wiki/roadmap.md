@@ -265,7 +265,7 @@ Nouvelle entité `ProjetOpenField` (N mères, pères identifiés ou inconnus, li
 - Poller APScheduler dédié (5 min), verrou MySQL nommé pour éviter le double-polling multi-workers
 - Section UI accordéon Paramétrage → Capteurs (Govee / Tapo / ESPHome)
 - 7 tests unitaires (`backend/test_tapo_service.py`)
-- Bug connu découvert au déploiement (sans gravité, non corrigé) : [[bugs/tapoconfig-migration-race]]
+- Bug découvert au déploiement (race `create_all()` entre les 2 workers) : ✅ corrigé 2026-10-23, init de la base une seule fois avant les workers ([[bugs/tapoconfig-migration-race]])
 
 ### Offset VPD foliaire configurable ✅
 - `AppSettings('vpd_leaf_offset')` — défaut 2.0°C

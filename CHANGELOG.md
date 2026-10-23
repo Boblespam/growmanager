@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.11.2] - 2026-10-23
+
+### Corrigé
+- **Erreur au démarrage du serveur après une mise à jour qui ajoute une table** : les 2 processus du backend tentaient de créer la table en même temps, l'un des deux plantait (« Table already exists ») puis redémarrait. La base est maintenant préparée une seule fois (tables, migrations, valeurs par défaut) avant le lancement des 2 processus. Aucune action requise : effectif au prochain `update.sh`.
+
+---
+
 ## [3.11.1] - 2026-10-21
 
 ### Corrigé

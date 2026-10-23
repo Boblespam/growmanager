@@ -1,10 +1,9 @@
-fix: vue groupée Matériel par nom de base (avant le #) + pagination 25 par défaut
+fix: init de la base une seule fois avant les workers uvicorn (race create_all)
 
-- Regroupement sur le nom avant le « # », insensible à la casse (un groupe par item auparavant)
-- Groupes triés alphabétiquement, items en ordre naturel, colonnes triables comme en vue liste
-- Confirmation de suppression dans les groupes (réutilisation de ItemRow)
-- Pagination client 25/50/100/Tout, 25 par défaut, mémorisée dans le navigateur
-- Le chargement n'attend que la requête de l'onglet actif
+- Tables, migrations et seeds déplacés de main.py vers app/db_init.py (code inchangé)
+- Dockerfile.prod : python -m app.db_init puis uvicorn --workers 2 avec GM_SKIP_DB_INIT=1
+- Dev inchangé : main.py fait l'init lui-même (un seul process)
+- Wiki : bug tapoconfig-migration-race passé en corrigé, règle ajoutée dans patterns
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01UFEaghXjCCKghtt8fh1eKW
+Claude-Session: https://claude.ai/code/session_01EsLMfq9ac44wpZdALUBZgw

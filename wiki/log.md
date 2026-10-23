@@ -6,6 +6,15 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-23] Bugfix | Init de la base une seule fois avant les workers (race `create_all()`)
+
+Revue de la roadmap avec Pik : le bug [[bugs/tapoconfig-migration-race]] (ouvert depuis le 2026-09-13) était toujours présent, le correctif du 2026-10-13 ([[bugs/parametres-doublons-seed-workers]]) ne couvrait que les seeds des listes. Bug reproduit sur MySQL réel avec 2 workers : `(1050, "Table ... already exists")` à chaque démarrage sur base vide. Correction validée : création des tables, migrations et seeds déplacés tels quels de `main.py` vers le nouveau module `app/db_init.py` (`init_database()`, lançable par `python -m app.db_init`). `Dockerfile.prod` lance l'init une fois puis `uvicorn --workers 2` avec `GM_SKIP_DB_INIT=1`. En dev, `main.py` fait l'init lui-même (comportement inchangé). Testé : base vide (3 essais), redémarrage, ajout d'une nouvelle table, mode dev, sans erreur ni doublon. Règle ajoutée dans [[architecture/patterns]] section 1 : migrations et seeds vont dans `db_init.py`.
+
+### Files modified
+- `backend/app/db_init.py` (nouveau)
+- `backend/app/main.py`
+- `backend/Dockerfile.prod`
+
 ## [2026-10-21] Fix + Feature | Page Matériel : vue groupée par nom de base + pagination
 
 Constat de Pik : la vue « Groupé » ne groupait rien (un groupe par item) et la page devenait lente avec beaucoup de matériel. Cause : clé de groupement `categorie||nom||marque` avec le nom complet, donc incluant le `#N`. Correction validée : clé = `baseNom(nom)` (texte avant le `#`, espaces normalisés, insensible à la casse). Groupes triés alphabétiquement (`Intl.Collator` numérique), items en ordre naturel ; si un tri de colonne est actif, il prime. La vue groupée reprend les colonnes triables de la vue liste ; les lignes dépliées réutilisent `ItemRow` (prop `nested`), ce qui ajoute la confirmation de suppression. Ralentissement : le backend `GET /api/materiel` est une simple requête, le coût venait du rendu de toutes les lignes. Ajout d'une pagination côté client : 25 par défaut, sélecteur 25/50/100/Tout mémorisé en `localStorage` (`gm.materiel.pageSize.v2`, accès en try/catch ; bug corrigé avant livraison : `Number(null)` = 0 = « Tout » au premier chargement). Pagination par groupe en vue groupée, reset en page 1 sur changement de filtre/recherche/tri/vue. Le spinner ne bloque plus que sur la requête de l'onglet actif. L'onglet Vaporisateurs (cartes) n'est pas concerné. Voir [[frontend/pages]].
