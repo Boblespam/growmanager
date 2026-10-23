@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.12.0] - 2026-10-23
+
+### Ajouté
+- **Sauvegarde et restauration en mode autonome** : l'onglet « Sauvegarde et restaurations » du Paramétrage est maintenant disponible dans l'app sans serveur. Le bouton crée un fichier `.zip` avec toutes les données du téléphone (cultures, stocks, recettes, paramétrage…) et, au choix, les photos. La restauration contrôle le fichier avant de toucher aux données et remplace tout d'un seul bloc : en cas d'erreur, rien n'est modifié. À copier hors du téléphone (Drive, ordinateur) pour ne rien perdre en cas de perte ou de changement d'appareil. Le mode serveur garde sa sauvegarde `.sql`.
+
+---
+
 ## [3.11.2] - 2026-10-23
 
 ### Corrigé

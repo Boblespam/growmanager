@@ -65,9 +65,20 @@ sprint1_completed: 2026-05-10
 | B5 | Transverses : dashboard, calendrier, search, comparaison, consommation, historique_culture | ✅ validé 2026-07-06 — dashboard.ts (stats 6 modules, arrosage-boxes, burping, IPM), transverses.ts (calendrier global + export, search, cultures/compare complet, historique + prix-graine), consommation.ts (CRUD + stats/projection) · capteurs → null en standalone · import/export CSV → B6 |
 | B6 | Limitations & polish : capteurs masqués, photos, doc | ✅ validé 2026-07-06 — photos standalone (@capacitor/filesystem, photos-fs.ts, photoUrl convertFileSrc, sans compression/thumbnail v1) · capteurs masqués (Dashboard, nav Constantes, onglets Paramétrage Capteurs/Sauvegarde) · doc [[features/mobile-standalone]] · exports PDF/CSV et imports CSV restent en 501 — **Phase B complète**, test APK réel à faire |
 
+**Finitions Phase B (plan validé 2026-10-23)** : inventaire automatique des routes serveur absentes du backend local → 98 manquantes, dont 34 capteurs (exclus volontairement, serveur requis) et 64 à porter.
+
+| Sprint | Contenu | État |
+|--------|---------|------|
+| B7 | Sauvegarde & restauration en mode autonome (.zip base + photos) | ✅ validé 2026-10-23 (sur tests automatisés, test APK réel à faire) — voir [[features/mobile-standalone#sauvegarde--restauration]] |
+| B8 | Exports & imports CSV (20 exports, 15 imports : référentiels, stock, extractions, historique, matériel, engrais, espaces, 6 recettes, notations, plan de culture) | ⏳ à faire |
+| B9 | PDF : étiquette QR stock (aujourd'hui générée par le backend Python), vérif fiche culture et calendrier en autonome | ⏳ à faire |
+| B10 | Test complet de l'APK en mode autonome par Pik | ⏳ à faire |
+
+Constat 2026-10-23 : en mode serveur sur l'APK, les téléchargements (blob + `<a download>`) et le PDF fiche culture fonctionnent (confirmé par Pik) → pas besoin de socle « Partager » natif, le mode autonome réutilise le même mécanisme.
+
 **Limites connues du mode standalone** :
-- Capteurs Govee/esphome inopérants (nécessitent le serveur) — UI masquée en standalone.
-- Exports PDF (étiquettes, fiche culture) générés côté backend Python → à réimplémenter en JS (jsPDF) ou désactivés en v1 standalone.
+- Capteurs Govee/Tapo/ESPHome inopérants (nécessitent un serveur allumé en permanence) — UI masquée en standalone. Choix assumé.
+- Exports PDF étiquettes QR et CSV : voir B8/B9 ci-dessus.
 - Distribution Play Store possible (aucune donnée embarquée dans l'app).
 
 ---

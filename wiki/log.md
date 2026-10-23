@@ -6,6 +6,19 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-23] Feature | Sauvegarde & restauration en mode autonome (sprint B7)
+
+Reprise de la Phase B avec Pik. Inventaire automatique (routes FastAPI vs `route()` du backend local) : 321 routes serveur, 98 absentes en autonome, dont 34 capteurs exclus volontairement. Plan B7→B10 validé, voir [[roadmap]]. Pik confirme que les téléchargements et le PDF fiche culture marchent déjà sur l'APK en mode serveur → réutilisation du même mécanisme (blob + `<a download>`).
+
+B7 validé (sur tests automatisés) : choix de Pik = copie de la base (pas de format universel vers le serveur). Sauvegarde `.zip` (base complète en JSON + photos), restauration atomique avec contrôle préalable du fichier, photos substituées seulement une fois toutes écrites. ZIP « stored » écrit maison (`zip.ts`) pour éviter une dépendance npm. Onglet Sauvegarde du Paramétrage réaffiché en autonome, textes adaptés, case « Inclure les photos ». Détail : [[features/mobile-standalone#sauvegarde--restauration]]. 11 tests Node sur le vrai schéma, `tsc` et `vite build` OK. Test APK réel à faire (B10).
+
+### Files modified
+- `frontend/src/local/zip.ts` (nouveau)
+- `frontend/src/local/backup-core.ts` (nouveau)
+- `frontend/src/local/handlers/backup.ts` (nouveau)
+- `frontend/src/local/handlers/index.ts`, `frontend/src/local/router.ts`, `frontend/src/local/adapter.ts`
+- `frontend/src/pages/Parametrage.tsx`
+
 ## [2026-10-23] Bugfix | Init de la base une seule fois avant les workers (race `create_all()`)
 
 Revue de la roadmap avec Pik : le bug [[bugs/tapoconfig-migration-race]] (ouvert depuis le 2026-09-13) était toujours présent, le correctif du 2026-10-13 ([[bugs/parametres-doublons-seed-workers]]) ne couvrait que les seeds des listes. Bug reproduit sur MySQL réel avec 2 workers : `(1050, "Table ... already exists")` à chaque démarrage sur base vide. Correction validée : création des tables, migrations et seeds déplacés tels quels de `main.py` vers le nouveau module `app/db_init.py` (`init_database()`, lançable par `python -m app.db_init`). `Dockerfile.prod` lance l'init une fois puis `uvicorn --workers 2` avec `GM_SKIP_DB_INIT=1`. En dev, `main.py` fait l'init lui-même (comportement inchangé). Testé : base vide (3 essais), redémarrage, ajout d'une nouvelle table, mode dev, sans erreur ni doublon. Règle ajoutée dans [[architecture/patterns]] section 1 : migrations et seeds vont dans `db_init.py`.

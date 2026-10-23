@@ -55,7 +55,7 @@ export const localAdapter: AxiosAdapter = async (config) => {
     data,
     status,
     statusText: status === 501 ? 'Not Implemented' : '',
-    headers: {},
+    headers: result?.headers ?? {},
     config,
     request: {},
   }

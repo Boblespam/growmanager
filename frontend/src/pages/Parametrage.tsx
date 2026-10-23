@@ -2161,23 +2161,39 @@ function BackupSection() {
   const [dragOver,     setDragOver]     = useState(false)
   const [confirmOpen,  setConfirmOpen]  = useState(false)
   const [pendingFile,  setPendingFile]  = useState<File | null>(null)
+  const [withPhotos,   setWithPhotos]   = useState(true)
+
+  // Mode autonome : sauvegarde .zip (base du téléphone + photos) au lieu du .sql serveur
+  const standalone = getAppMode() === 'standalone'
+  const ext = standalone ? '.zip' : '.sql'
+  const { data: info } = useQuery({
+    queryKey: ['backup-info'],
+    queryFn: () => apiClient.get<{ nb_photos: number; taille_photos_ko: number }>('/backup/info').then(r => r.data),
+    enabled: standalone,
+  })
+  const photosMo = info ? Math.round(info.taille_photos_ko / 102.4) / 10 : 0
 
   // ── Télécharger la sauvegarde ──────────────────────────────────────────────
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const res = await apiClient.get('/backup/dump', { responseType: 'blob' })
+      const res = await apiClient.get('/backup/dump', {
+        responseType: 'blob',
+        ...(standalone ? { params: { photos: withPhotos ? 1 : 0 } } : {}),
+      })
       const disposition = res.headers['content-disposition'] ?? ''
       const match = disposition.match(/filename=([^\s;]+)/)
-      const filename = match ? match[1] : `growmanager_backup_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.sql`
+      const filename = match ? match[1] : `growmanager_backup_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}${ext}`
       const url = URL.createObjectURL(new Blob([res.data]))
       const a = document.createElement('a')
       a.href = url
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      alert('Erreur lors du téléchargement — vérifiez que le container backend est bien rebuild.')
+    } catch (e: any) {
+      alert(standalone
+        ? `Erreur lors de la sauvegarde : ${e?.message ?? 'erreur inconnue'}${withPhotos ? ' (essayez sans les photos)' : ''}`
+        : 'Erreur lors du téléchargement — vérifiez que le container backend est bien rebuild.')
     } finally {
       setDownloading(false)
     }
@@ -2189,13 +2205,13 @@ function BackupSection() {
     setDragOver(false)
     const file = e.dataTransfer.files[0]
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.sql')) {
-      setRestoreMsg({ ok: false, text: 'Fichier invalide — seuls les .sql sont acceptés' })
+    if (!file.name.toLowerCase().endsWith(ext)) {
+      setRestoreMsg({ ok: false, text: `Fichier invalide — seuls les ${ext} sont acceptés` })
       return
     }
     setPendingFile(file)
     setConfirmOpen(true)
-  }, [])
+  }, [ext])
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -2214,10 +2230,14 @@ function BackupSection() {
     try {
       const form = new FormData()
       form.append('file', pendingFile)
-      await apiClient.post('/backup/restore', form, {
+      const res = await apiClient.post('/backup/restore', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setRestoreMsg({ ok: true, text: '✓ Base restaurée — rechargement dans 3 secondes…' })
+      const d = res.data as { lignes?: number; photos?: number } | undefined
+      const detail = standalone && d?.lignes !== undefined
+        ? ` (${d.lignes} enregistrements, ${d.photos ?? 0} photos)`
+        : ''
+      setRestoreMsg({ ok: true, text: `✓ Base restaurée${detail} — rechargement dans 3 secondes…` })
       setTimeout(() => window.location.reload(), 3000)
     } catch (e: any) {
       const detail = e?.response?.data?.detail ?? 'Erreur inconnue'
@@ -2238,7 +2258,11 @@ function BackupSection() {
         </div>
         <div>
           <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">Sauvegarde & Restauration</h2>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Export complet de la base de données (mysqldump)</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            {standalone
+              ? 'Copie complète des données de ce téléphone (mode autonome)'
+              : 'Export complet de la base de données (mysqldump)'}
+          </p>
         </div>
       </div>
 
@@ -2249,11 +2273,32 @@ function BackupSection() {
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
             <Download size={15} className="text-grow-600" /> Exporter
           </h3>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Génère un fichier <code className="bg-gray-100 px-1 rounded">.sql</code> contenant
-            toute la base de données — structure et données.
-            À conserver comme backup avant une mise à jour.
-          </p>
+          {standalone ? (
+            <>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Génère un fichier <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">.zip</code> avec
+                toutes vos données (cultures, stocks, recettes, paramétrage…).
+                Vos données n'existent que sur ce téléphone : copiez ce fichier ailleurs
+                (Drive, ordinateur) pour ne rien perdre en cas de perte ou de changement de téléphone.
+              </p>
+              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={withPhotos}
+                  onChange={e => setWithPhotos(e.target.checked)}
+                  className="rounded border-gray-300 text-grow-600 focus:ring-grow-500"
+                />
+                Inclure les photos
+                {info && <span className="text-gray-400 dark:text-gray-500">({info.nb_photos} photo{info.nb_photos > 1 ? 's' : ''}, ~{photosMo} Mo)</span>}
+              </label>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Génère un fichier <code className="bg-gray-100 px-1 rounded">.sql</code> contenant
+              toute la base de données — structure et données.
+              À conserver comme backup avant une mise à jour.
+            </p>
+          )}
           <button
             onClick={handleDownload}
             disabled={downloading}
@@ -2273,8 +2318,10 @@ function BackupSection() {
             <Upload size={15} className="text-orange-500" /> Restaurer
           </h3>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            Glissez-déposez un fichier <code className="bg-gray-100 px-1 rounded">.sql</code> ou
-            cliquez pour sélectionner.{' '}
+            {standalone
+              ? <>Choisissez un fichier <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">.zip</code> créé par le bouton ci-contre (mode autonome uniquement).{' '}</>
+              : <>Glissez-déposez un fichier <code className="bg-gray-100 px-1 rounded">.sql</code> ou
+            cliquez pour sélectionner.{' '}</>}
             <span className="text-orange-500 font-medium">⚠ Remplace toutes les données existantes.</span>
           </p>
 
@@ -2295,11 +2342,11 @@ function BackupSection() {
                 ? 'Restauration en cours…'
                 : dragOver
                   ? 'Relâchez pour restaurer'
-                  : 'Glissez un .sql ici ou cliquez pour choisir'}
+                  : standalone ? 'Touchez pour choisir le fichier .zip' : 'Glissez un .sql ici ou cliquez pour choisir'}
             </span>
             <input
               type="file"
-              accept=".sql"
+              accept={standalone ? '.zip,application/zip' : '.sql'}
               className="hidden"
               onChange={handleFileInput}
               disabled={restoring}
@@ -2334,7 +2381,7 @@ function BackupSection() {
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300">
               Le fichier <strong className="text-gray-800 dark:text-gray-100">{pendingFile.name}</strong> va
-              remplacer <strong>toutes les données</strong> actuelles de GrowManager.
+              remplacer <strong>toutes les données</strong> actuelles de GrowManager{standalone ? ' sur ce téléphone, photos comprises' : ''}.
             </p>
             <div className="flex gap-3 justify-end pt-1">
               <button
@@ -2694,11 +2741,11 @@ type TabId = 'general' | 'backup' | 'capteurs' | 'alertes'
 export default function ParametragePage() {
   const [activeTab, setActiveTab] = useState<TabId>('general')
 
-  // Mode autonome : capteurs (serveur requis) et sauvegarde CSV (non portée) masqués
+  // Mode autonome : capteurs masqués (serveur requis). Sauvegarde : version .zip locale.
   const standalone = getAppMode() === 'standalone'
   const tabs: { id: TabId; label: string }[] = [
     { id: 'general',  label: 'Général' },
-    ...(!standalone ? [{ id: 'backup' as TabId, label: 'Sauvegarde et restaurations' }] : []),
+    { id: 'backup',   label: 'Sauvegarde et restaurations' },
     ...(!standalone ? [{ id: 'capteurs' as TabId, label: 'Capteurs' }] : []),
     { id: 'alertes',  label: '⚠ Alertes Stock' },
   ]

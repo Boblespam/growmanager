@@ -13,6 +13,7 @@ export interface LocalContext {
 export interface LocalResponse {
   status?: number // défaut 200
   data?: unknown
+  headers?: Record<string, string> // ex. content-disposition pour un téléchargement
 }
 
 export type LocalHandler = (ctx: LocalContext) => Promise<LocalResponse> | LocalResponse
