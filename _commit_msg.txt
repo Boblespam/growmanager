@@ -1,1 +1,1 @@
-chore: visuels fiche Google Play + ancre suppression des donnees (politique de confidentialite)
+chore: captures d ecran fiche Google Play (recadrees ratio 2:1)

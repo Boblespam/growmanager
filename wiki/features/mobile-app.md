@@ -67,7 +67,7 @@ Keystore généré une seule fois via `keytool -genkeypair` (RSA 2048, validité
 
 **Politique de confidentialité** : `docs/privacy/index.html`, publiée par GitHub Pages (repo public, source `main` / `/docs`) à https://mdf73.github.io/growmanager/privacy/ . Ancre `#suppression` utilisée comme URL de suppression des données. Toute évolution de la collecte de données doit être répercutée dans cette page **et** dans le formulaire Sécurité des données.
 
-**Visuels de la fiche** : `docs/play-store/icon-512.png` (depuis `frontend/assets/icon.png`) et `docs/play-store/feature-graphic-1024x500.png` (feuille `IconSeul.png` + titre, police Poppins, fond `#1B4332`). Captures téléphone : à fournir par Pik.
+**Visuels de la fiche** : `docs/play-store/icon-512.png` (depuis `frontend/assets/icon.png`) et `docs/play-store/feature-graphic-1024x500.png` (feuille `IconSeul.png` + titre, police Poppins, fond `#1B4332`). Captures téléphone : `docs/play-store/captures/01..08-*.jpg`, recadrées depuis les originaux 1080×2340 (barre d'état et barre de navigation retirées) car Google refuse un ratio supérieur à 2:1.
 
 | Déclaration | Réponse |
 |---|---|
@@ -78,6 +78,10 @@ Keystore généré une seule fois via `keytool -genkeypair` (RSA 2048, validité
 | Sécurité des données | Collecte Oui (déclaration prudente car le mode serveur envoie les données hors de l'appareil), non chiffrée en transit (http autorisé), pas de compte, suppression via l'URL `#suppression`. Types : Photos + Autre contenu généré par l'utilisateur, collectés, non partagés, non éphémères, **facultatifs**, finalité Fonctionnement de l'appli |
 | Applis gouvernementales / Finances / Santé | Non / aucune / aucune |
 | Catégorie / Contact | Appli, Productivité / pik.contactpro@gmail.com |
+
+Déclaration IA de la fiche : icône et bannière signalées comme générées par IA (logo), captures non signalées.
+
+État au 2026-10-24 : toutes les tâches de configuration du tableau de bord sont faites. Prochaine étape pour la Production : publier une version en **Test fermé** et y inscrire 12 testeurs actifs pendant 14 jours (0 inscrit à ce jour).
 
 Fiche par défaut fr-FR : description courte et longue sans vocabulaire de vente (Google interdit les applis qui facilitent la vente de cannabis, pas le suivi de culture).
 

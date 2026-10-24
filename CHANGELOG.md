@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.13.4] - 2026-10-24
+
+### Ajouté
+- **Captures d'écran de la fiche Google Play** (8 écrans, recadrés en 1080×2116 pour respecter le ratio 2:1 maximum) dans `docs/play-store/captures/`.
+
+---
+
 ## [3.13.3] - 2026-10-24
 
 ### Ajouté

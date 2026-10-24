@@ -70,3 +70,7 @@ wiki/.obsidian/
 logs/
 tmp/
 .mcp.json
+
+# Captures brutes du telephone (les versions recadrees sont dans docs/play-store/captures/)
+docs/play-store/Screenshot_*
+Claude outputs/_planche_captures.jpg
