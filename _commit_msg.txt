@@ -1,1 +1,1 @@
-chore: politique de confidentialite publique pour Google Play (GitHub Pages /docs)
+chore: visuels fiche Google Play + ancre suppression des donnees (politique de confidentialite)

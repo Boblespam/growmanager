@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.13.3] - 2026-10-24
+
+### Ajouté
+- **Visuels de la fiche Google Play** (icône 512 px et bannière 1024×500) dans `docs/play-store/`, et ancre « suppression des données » dans la politique de confidentialité.
+
+---
+
 ## [3.13.2] - 2026-10-24
 
 ### Ajouté

@@ -6,6 +6,14 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-24] Décision | Google Play : déclarations Contenu de l'application et fiche Store
+
+Remplissage dans Play Console (par Claude, validé par Pik) des 10 déclarations « Contenu de l'application », de la catégorie, des coordonnées et des textes de la fiche fr-FR. Politique de confidentialité publiée via GitHub Pages (`/docs`). Choix clés : Sécurité des données en déclaration prudente (collecte facultative, non chiffrée), cible 18+ uniquement, classification avec références au cannabis. Détail dans [[features/mobile-app]].
+
+### Files modified
+- `docs/privacy/index.html` (nouveau), `docs/play-store/icon-512.png`, `docs/play-store/feature-graphic-1024x500.png` (nouveaux)
+- `wiki/features/mobile-app.md`, `CHANGELOG.md`
+
 ## [2026-10-23] Fix | Drawers Origine stock / bocal décalés de 24 px
 
 Retour de Pik sur l'APK : le panneau Origine du stock laissait voir le header en haut et les nouveaux boutons du bas étaient coupés par la barre Android. Cause : marge `space-y-6` du parent appliquée au drawer `fixed`. Fix : `createPortal` vers `document.body` pour `StockOriginDrawer` et `BocalTimelineDrawer`. Validé par Pik. Voir [[bugs/drawer-decale-space-y]], règle dans [[frontend/conventions]].

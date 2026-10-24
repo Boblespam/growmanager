@@ -1,6 +1,6 @@
 ---
 type: feature
-updated: 2026-07-09
+updated: 2026-10-24
 sources: [frontend/capacitor.config.ts, .github/workflows/android-apk.yml, frontend/src/components/ServerSetup.tsx, frontend/src/api/client.ts]
 ---
 
@@ -62,6 +62,24 @@ Keystore généré une seule fois via `keytool -genkeypair` (RSA 2048, validité
 - **Temps 2 (optionnel)** : passage en **Production** publique (fiche visible par tous). Nécessite en plus du Test interne : un **Test fermé** avec 12 testeurs actifs pendant 14 jours consécutifs (le Test interne ne compte pas pour ce palier — spécifique aux comptes développeur perso créés après nov. 2023), + fiche store complète (icône, captures, description, politique de confidentialité, classification par âge, formulaire "Sécurité des données" cette fois obligatoire).
 
 Étapes manuelles côté Pik (hors repo, dans Play Console) : création du compte développeur (25$, vérification d'identité), création de l'app (`com.growmanager.app`), premier upload manuel de l'AAB pour activer Play App Signing, ajout des testeurs, partage du lien d'opt-in.
+
+### Fiche et déclarations Play Console (remplies le 2026-10-24)
+
+**Politique de confidentialité** : `docs/privacy/index.html`, publiée par GitHub Pages (repo public, source `main` / `/docs`) à https://mdf73.github.io/growmanager/privacy/ . Ancre `#suppression` utilisée comme URL de suppression des données. Toute évolution de la collecte de données doit être répercutée dans cette page **et** dans le formulaire Sécurité des données.
+
+**Visuels de la fiche** : `docs/play-store/icon-512.png` (depuis `frontend/assets/icon.png`) et `docs/play-store/feature-graphic-1024x500.png` (feuille `IconSeul.png` + titre, police Poppins, fond `#1B4332`). Captures téléphone : à fournir par Pik.
+
+| Déclaration | Réponse |
+|---|---|
+| Informations de connexion | Aucune restriction (le testeur choisit le mode Autonome) |
+| Annonces / Identifiant publicitaire | Non / Non |
+| Classification (IARC) | « Tous les autres types », référence + consommation de drogues illégales/récréatives, tout le reste Non → ESRB 17+, ClassInd 16 |
+| Cible | 18 ans et plus uniquement, accès limité aux mineurs identifiés par Google |
+| Sécurité des données | Collecte Oui (déclaration prudente car le mode serveur envoie les données hors de l'appareil), non chiffrée en transit (http autorisé), pas de compte, suppression via l'URL `#suppression`. Types : Photos + Autre contenu généré par l'utilisateur, collectés, non partagés, non éphémères, **facultatifs**, finalité Fonctionnement de l'appli |
+| Applis gouvernementales / Finances / Santé | Non / aucune / aucune |
+| Catégorie / Contact | Appli, Productivité / pik.contactpro@gmail.com |
+
+Fiche par défaut fr-FR : description courte et longue sans vocabulaire de vente (Google interdit les applis qui facilitent la vente de cannabis, pas le suivi de culture).
 
 ## Accès distant — Tailscale (recommandé)
 
