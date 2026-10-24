@@ -1,5 +1,1 @@
-fix: drawers Origine stock et bocal décalés de 24 px (boutons coupés sur Android)
-
-- StockOriginDrawer et BocalTimelineDrawer rendus via createPortal vers document.body : la marge space-y-6 de la page ne les décale plus
-- Wiki : bug drawer-decale-space-y, règle portal dans frontend/conventions
-- package-lock.json frontend resynchronisé après npm install local (@capacitor/filesystem)
+chore: politique de confidentialite publique pour Google Play (GitHub Pages /docs)

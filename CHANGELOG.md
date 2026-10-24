@@ -17,6 +17,13 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.13.2] - 2026-10-24
+
+### Ajouté
+- **Politique de confidentialité publique** pour la fiche Google Play : page `docs/privacy/index.html`, publiée via GitHub Pages à l'adresse https://mdf73.github.io/growmanager/privacy/ (aucun compte, aucune publicité, aucun traceur, données sur le téléphone ou sur le serveur de l'utilisateur).
+
+---
+
 ## [3.13.1] - 2026-10-23
 
 ### Corrigé
