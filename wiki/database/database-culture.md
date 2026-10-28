@@ -91,6 +91,8 @@ Calendar event/action tied to a plant or a whole culture.
 
 Known `type_action` values: `graine_germee`, `debut_croissance`, `debut_floraison`, `passage_12_12`, `arrosage_eau`, `arrosage_engrais`, `taille`, `defoliation`, `recolte`, `observations`, `traitement`, `photo`
 
+**Catégorie Training & Taille** (`category: 'training'`, 2026-10-28) : `mise_en_place_filet`, `mise_en_place_sog`, `mise_en_place_scrog`, `tucking_scrog`, `palissage`, `hst`, `super_cropping`, `mainlining`, `etetage`, `fim`, `pincage`, `defoliation`, `lollipopping`, `schwazzing`, `tuteurage`. Toutes sauf `mise_en_place_filet` ont `parametres.intensite` ∈ `legere` / `normale` / `forte` / `intense` (`INTENSITE_OPTIONS` dans `actionTypes.ts` ; valeur historique `lourde` sur d'anciennes défoliations, affichée « Forte »). Paramètres supplémentaires : `nb_plantes_m2` (SOG), `hauteur_filet_cm` + `maille_cm` (SCROG), `nb_attaches` (palissage), `nb_tiges` (super cropping), `nb_tetes` (mainlining). `mise_en_place_filet` reste distinct de `mise_en_place_scrog` (filet posé sans palissage). Actions informationnelles, sans effet de bord côté backend.
+
 **Action `photo`** : catégorie dédiée (rose) dans `actionTypes.ts`. Quand sélectionnée dans `ActionModal`, affiche une drop zone — les fichiers sont uploadés via `POST /api/photos/upload` avec `date_prise = date_action`. Un enregistrement `ActionCalendrier` de type `photo` est aussi créé avec `parametres.nb_photos`. La note de l'action sert de légende à toutes les photos uploadées. La cible (`target`) de l'action détermine `id_plant` : si `global` → photo de culture (id_plant=null) ; si plante spécifique → photo associée à la culture ET à la plante.
 
 Voir aussi → [[features/photos]]

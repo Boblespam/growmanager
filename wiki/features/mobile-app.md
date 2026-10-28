@@ -81,7 +81,7 @@ Keystore généré une seule fois via `keytool -genkeypair` (RSA 2048, validité
 
 Déclaration IA de la fiche : icône et bannière signalées comme générées par IA (logo), captures non signalées.
 
-État au 2026-10-24 : toutes les tâches de configuration du tableau de bord sont faites. Prochaine étape pour la Production : publier une version en **Test fermé** et y inscrire 12 testeurs actifs pendant 14 jours (0 inscrit à ce jour).
+État au 2026-10-24 : toutes les tâches de configuration du tableau de bord sont faites. **Test fermé lancé** sur le canal « Tests fermés - Alpha » : version 31300 (3.13.0) promue depuis le Test interne, pays France uniquement (Europe à ajouter plus tard dans l'onglet Pays/Régions), listes de diffusion « Perso » (1) + « Testeurs » (5) réutilisées depuis le test interne, retours vers pik.contactpro@gmail.com. 14 modifications (version + fiche + déclarations) envoyées à l'examen Google le 2026-10-24. Les testeurs doivent se réinscrire via le lien du test fermé (mise à jour par-dessus, données conservées, sauf APK installé depuis GitHub). Compteur Production : 12 inscrits pendant 14 jours consécutifs (viser 15+), 6 testeurs au lancement.
 
 Fiche par défaut fr-FR : description courte et longue sans vocabulaire de vente (Google interdit les applis qui facilitent la vente de cannabis, pas le suivi de culture).
 

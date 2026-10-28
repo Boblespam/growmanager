@@ -103,6 +103,10 @@ This preserves history for statistics.
 
 `graine_germee`, `graine_morte`, `debut_croissance`, `debut_floraison`, `passage_12_12`, `arrosage_eau`, `arrosage_engrais`, `taille`, `defoliation`, `recolte`, `deces_plante`, `observations`, `traitement`
 
+Training & Taille (2026-10-28) : `mise_en_place_filet`, `mise_en_place_sog`, `mise_en_place_scrog`, `tucking_scrog`, `palissage`, `hst`, `super_cropping`, `mainlining`, `etetage`, `fim`, `pincage`, `defoliation`, `lollipopping`, `schwazzing`, `tuteurage`. Voir [[database/database-culture]].
+
+**Ajouter un type d'action** : le définir dans `frontend/src/components/culture/actionTypes.ts` (catégorie, icône, `fields`), puis ajouter emoji/libellé dans `ACTION_META` de `pages/CalendrierGlobal.tsx` **et** de `utils/calendarPdfExport.ts` (+ `ACTION_COLORS_PDF`), et le libellé dans `ACTION_LABELS` du rapport PDF (`backend/app/routers/cultures.py`). L'affichage des paramètres passe par `formatActionParams()` (libellés et unités tirés des `fields`).
+
 The `global_culture` boolean flag marks whether an action applies to the whole culture vs. a single plant.
 
 ## 8. React Query Invalidation

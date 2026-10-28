@@ -6,6 +6,16 @@ Format: `## [YYYY-MM-DD] <operation> | <description>`
 
 ---
 
+## [2026-10-28] Feature | Catégorie d'actions « Training & Taille »
+
+Demande de Pik : toutes les techniques de training (SOG, SCROG...) avec une intensité comme pour la défoliation, dans une catégorie dédiée plutôt que dans Mesures & Soins (trop chargée). Nouvelle catégorie `training` (« Training & Taille », `bg-emerald-600`) avec 11 nouvelles actions + Défoliation, Étêtage, Pinçage et Mise en place du filet déplacés (le filet reste une action distincte de la mise en place SCROG : on peut poser un filet sans palisser). Échelle commune `INTENSITE_OPTIONS` (`legere`/`normale`/`forte`/`intense`), `lourde` historique affichée « Forte ». Nouveau helper `formatActionParams()` pour afficher les paramètres avec leurs libellés. Aucune migration (type_action VARCHAR, détails dans `parametres`). Clés `palissage` et `lollipopping` reprises du rapport PDF backend où elles existaient déjà. Validé par Pik.
+
+### Files modified
+- `frontend/src/components/culture/actionTypes.ts`, `frontend/src/components/culture/CalendrierCulture.tsx`
+- `frontend/src/pages/CalendrierGlobal.tsx`, `frontend/src/utils/calendarPdfExport.ts`
+- `backend/app/routers/cultures.py` (libellés du rapport PDF)
+- `wiki/database/database-culture.md`, `wiki/architecture/patterns.md`, `wiki/features/i18n.md`, `CHANGELOG.md`
+
 ## [2026-10-24] Décision | Google Play : déclarations Contenu de l'application et fiche Store
 
 Remplissage dans Play Console (par Claude, validé par Pik) des 10 déclarations « Contenu de l'application », de la catégorie, des coordonnées et des textes de la fiche fr-FR. Politique de confidentialité publiée via GitHub Pages (`/docs`). Choix clés : Sécurité des données en déclaration prudente (collecte facultative, non chiffrée), cible 18+ uniquement, classification avec références au cannabis. Détail dans [[features/mobile-app]].

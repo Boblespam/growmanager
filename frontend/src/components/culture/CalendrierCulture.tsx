@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Droplets } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { actionAPI, Action, ActionCreate, Plant } from '../../api/cultures'
-import { ACTION_MAP, CATEGORY_COLORS } from './actionTypes'
+import { ACTION_MAP, CATEGORY_COLORS, CATEGORY_LABELS, formatActionParams } from './actionTypes'
 import ActionModal from './ActionModal'
 import ArrosageModal from './ArrosageModal'
 import SensorDayChart from '../SensorDayChart'
@@ -250,10 +250,10 @@ export default function CalendrierCulture({ cultureId, idEspace, emplacements, p
 
       {/* Légende */}
       <div className="flex flex-wrap gap-3 text-xs">
-        {(['germination', 'lampe', 'arrosage', 'stade', 'mesure', 'recolte'] as const).map(cat => (
+        {(['germination', 'lampe', 'arrosage', 'stade', 'mesure', 'training', 'recolte'] as const).map(cat => (
           <span key={cat} className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
             <span className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[cat]}`} />
-            {cat}
+            {CATEGORY_LABELS[cat]}
           </span>
         ))}
         <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
@@ -492,10 +492,7 @@ export default function CalendrierCulture({ cultureId, idEspace, emplacements, p
                         )}
                         {action.parametres && Object.keys(action.parametres).length > 0 && (
                           <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                            {Object.entries(action.parametres)
-                              .filter(([k]) => !['produits', 'produits_calcules', 'produits_consommes'].includes(k))
-                              .map(([k, v]) => `${k}: ${v}`)
-                              .join(' · ')}
+                            {formatActionParams(action.type_action, action.parametres as Record<string, unknown>)}
                           </p>
                         )}
                         {action.note && (

@@ -17,6 +17,22 @@ Versioning : [Semantic Versioning](https://semver.org/lang/fr/) — `MAJOR.MINOR
 
 ---
 
+## [3.14.0] - 2026-10-28
+
+### Ajouté
+- **Nouvelle catégorie d'actions « Training & Taille »** (vert émeraude) : Mise en place SOG (plantes/m²), Mise en place SCROG (hauteur du filet, taille de maille), Passage dans le filet SCROG, LST / Palissage (nombre d'attaches), HST, Super cropping (tiges pliées), Mainlining / Manifold (têtes visées), FIM, Lollipopping, Schwazzing, Tuteurage / Yoyo.
+- **Échelle d'intensité commune** Légère / Normale / Forte / Intense sur toutes les actions de training et de taille (sauf Mise en place du filet).
+
+### Modifié
+- Défoliation, Étêtage, Pinçage et Mise en place du filet déplacés de « Mesures & Soins » vers « Training & Taille ». L'ancienne intensité `lourde` de la défoliation s'affiche « Forte ».
+- Détail d'un jour du calendrier de culture : paramètres affichés lisiblement (« Intensité : Forte · Hauteur du filet : 30 cm ») au lieu des codes bruts. Légende du calendrier avec les vrais noms de catégories.
+- Calendrier global, export PDF du calendrier et rapport PDF de culture : libellés et emojis des nouvelles actions.
+
+### Modifié
+- **Google Play : lancement du test fermé** (version 3.13.0 promue depuis le test interne, France) et envoi de la fiche Store et des déclarations à l'examen. Documentation dans le wiki (`features/mobile-app.md`).
+
+---
+
 ## [3.13.4] - 2026-10-24
 
 ### Ajouté

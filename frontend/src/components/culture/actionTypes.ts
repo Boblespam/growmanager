@@ -6,6 +6,7 @@ export type ActionCategory =
   | 'arrosage'
   | 'stade'
   | 'mesure'
+  | 'training'
   | 'recolte'
   | 'photo'
 
@@ -27,6 +28,22 @@ export interface FieldDef {
   unit?: string
   placeholder?: string
 }
+
+// ─── Échelle d'intensité commune (Training & Taille) ─────────────────────────
+export const INTENSITE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'legere',  label: 'Légère' },
+  { value: 'normale', label: 'Normale' },
+  { value: 'forte',   label: 'Forte' },
+  { value: 'intense', label: 'Intense' },
+]
+
+/** Libellés d'intensité, y compris la valeur historique `lourde` (affichée « Forte »). */
+export const INTENSITE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(INTENSITE_OPTIONS.map(o => [o.value, o.label])),
+  lourde: 'Forte',
+}
+
+const INTENSITE_FIELD: FieldDef = { key: 'intensite', label: 'Intensité', type: 'select', options: INTENSITE_OPTIONS }
 
 // ─── Catalogue complet ────────────────────────────────────────────────────────
 
@@ -104,16 +121,10 @@ export const ACTION_TYPES: ActionTypeDef[] = [
   // ── Mesures & Soins ────────────────────────────────────────────────────────
   { key: 'hauteur_plante',        label: 'Hauteur plante',                   category: 'mesure', icon: '📐',
     fields: [{ key: 'hauteur_cm', label: 'Hauteur', type: 'number', unit: 'cm' }] },
-  { key: 'defoliation',           label: 'Défoliation',                      category: 'mesure', icon: '✂️',
-    fields: [{ key: 'intensite', label: 'Intensité', type: 'select',
-      options: [{ value: 'legere', label: 'Légère' }, { value: 'normale', label: 'Normale' }, { value: 'lourde', label: 'Lourde' }] }] },
-  { key: 'etetage',               label: 'Étêtage',                          category: 'mesure', icon: '✂️' },
-  { key: 'pincage',               label: 'Pinçage',                          category: 'mesure', icon: '🤏' },
   { key: 'rempotage',             label: 'Rempotage',                        category: 'mesure', icon: '🪴',
     fields: [{ key: 'volume_pot_l', label: 'Volume du pot', type: 'number', unit: 'L' }] },
   { key: 'apparition_etage',      label: 'Apparition d\'un étage',           category: 'mesure', icon: '🌿',
     fields: [{ key: 'numero_etage', label: 'Étage n°', type: 'number' }] },
-  { key: 'mise_en_place_filet',   label: 'Mise en place du filet',           category: 'mesure', icon: '🕸️' },
   { key: 'detection_maladie',     label: 'Détection de maladie',             category: 'mesure', icon: '🦠',
     fields: [{ key: 'note', label: 'Description', type: 'text', placeholder: 'Type de maladie observée…' }] },
   { key: 'detection_parasite',    label: 'Détection de parasite',            category: 'mesure', icon: '🐛',
@@ -132,6 +143,32 @@ export const ACTION_TYPES: ActionTypeDef[] = [
       { key: 'delai_recolte_j', label: 'Délai avant récolte',   type: 'number', unit: 'jours', placeholder: '14' },
     ] },
   { key: 'deces_plante',          label: 'Décès de la plante',               category: 'mesure', icon: '💀' },
+
+  // ── Training & Taille ─────────────────────────────────────────────────────
+  { key: 'mise_en_place_filet',   label: 'Mise en place du filet',           category: 'training', icon: '🕸️' },
+  { key: 'mise_en_place_sog',     label: 'Mise en place SOG',                category: 'training', icon: '🌾',
+    fields: [INTENSITE_FIELD, { key: 'nb_plantes_m2', label: 'Plantes / m²', type: 'number', unit: 'pl/m²', placeholder: '16' }] },
+  { key: 'mise_en_place_scrog',   label: 'Mise en place SCROG',              category: 'training', icon: '🔲',
+    fields: [
+      INTENSITE_FIELD,
+      { key: 'hauteur_filet_cm', label: 'Hauteur du filet', type: 'number', unit: 'cm', placeholder: '30' },
+      { key: 'maille_cm',        label: 'Taille de maille', type: 'number', unit: 'cm', placeholder: '5' },
+    ] },
+  { key: 'tucking_scrog',         label: 'Passage dans le filet SCROG',      category: 'training', icon: '🪡', fields: [INTENSITE_FIELD] },
+  { key: 'palissage',             label: 'LST / Palissage',                  category: 'training', icon: '🪢',
+    fields: [INTENSITE_FIELD, { key: 'nb_attaches', label: 'Nombre d\'attaches', type: 'number', placeholder: '4' }] },
+  { key: 'hst',                   label: 'HST',                              category: 'training', icon: '💪', fields: [INTENSITE_FIELD] },
+  { key: 'super_cropping',        label: 'Super cropping',                   category: 'training', icon: '🦴',
+    fields: [INTENSITE_FIELD, { key: 'nb_tiges', label: 'Tiges pliées', type: 'number', placeholder: '3' }] },
+  { key: 'mainlining',            label: 'Mainlining / Manifold',            category: 'training', icon: '🔱',
+    fields: [INTENSITE_FIELD, { key: 'nb_tetes', label: 'Têtes visées', type: 'number', placeholder: '8' }] },
+  { key: 'etetage',               label: 'Étêtage',                          category: 'training', icon: '✂️', fields: [INTENSITE_FIELD] },
+  { key: 'fim',                   label: 'FIM',                              category: 'training', icon: '✂️', fields: [INTENSITE_FIELD] },
+  { key: 'pincage',               label: 'Pinçage',                          category: 'training', icon: '🤏', fields: [INTENSITE_FIELD] },
+  { key: 'defoliation',           label: 'Défoliation',                      category: 'training', icon: '🍂', fields: [INTENSITE_FIELD] },
+  { key: 'lollipopping',          label: 'Lollipopping',                     category: 'training', icon: '🍭', fields: [INTENSITE_FIELD] },
+  { key: 'schwazzing',            label: 'Schwazzing',                       category: 'training', icon: '🍃', fields: [INTENSITE_FIELD] },
+  { key: 'tuteurage',             label: 'Tuteurage / Yoyo',                 category: 'training', icon: '🎋', fields: [INTENSITE_FIELD] },
 
   // ── Photo ─────────────────────────────────────────────────────────────────────
   { key: 'photo',                 label: 'Photo',                            category: 'photo',  icon: '📷' },
@@ -155,6 +192,7 @@ export const CATEGORY_COLORS: Record<ActionCategory, string> = {
   arrosage:    'bg-blue-500',
   stade:       'bg-purple-500',
   mesure:      'bg-orange-500',
+  training:    'bg-emerald-600',
   recolte:     'bg-red-500',
   photo:       'bg-pink-400',
 }
@@ -165,6 +203,7 @@ export const CATEGORY_LABELS: Record<ActionCategory, string> = {
   arrosage:    'Arrosage',
   stade:       'Stade du cycle',
   mesure:      'Mesures & Soins',
+  training:    'Training & Taille',
   recolte:     'Récolte',
   photo:       'Photo',
 }
@@ -178,3 +217,21 @@ export const ACTIONS_BY_CATEGORY = ACTION_TYPES.reduce<Record<ActionCategory, Ac
   },
   {} as Record<ActionCategory, ActionTypeDef[]>
 )
+
+// ─── Affichage lisible des paramètres d'une action ────────────────────────────
+/** Transforme `parametres` en « Libellé : valeur » en s'appuyant sur la définition des champs. */
+export function formatActionParams(typeAction: string, parametres: Record<string, unknown>): string {
+  const def = ACTION_MAP[typeAction]
+  return Object.entries(parametres)
+    .filter(([k, v]) => !['produits', 'produits_calcules', 'produits_consommes'].includes(k) && v !== '' && v !== null && v !== undefined)
+    .map(([k, v]) => {
+      const field = def?.fields?.find(f => f.key === k)
+      if (!field) return `${k}: ${v}`
+      let val = String(v)
+      if (k === 'intensite') val = INTENSITE_LABELS[val] ?? val
+      else if (field.type === 'select') val = field.options?.find(o => o.value === val)?.label ?? val
+      else if (field.unit) val = `${val} ${field.unit}`
+      return `${field.label} : ${val}`
+    })
+    .join(' · ')
+}
